@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="en-PK">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cat Adoption Radar — televet.pk</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<style>
+:root {
+  --bg:#080c18;--bg2:#0d1225;--surface:rgba(255,255,255,0.04);--surface2:rgba(255,255,255,0.07);
+  --teal:#00d4aa;--blue:#4f8ef7;--red:#ff4d6d;--amber:#f59e0b;
+  --text:#e8eaf0;--text-m:#9aa5b8;--text-d:#4a5568;
+  --border:rgba(255,255,255,0.08);--border2:rgba(0,212,170,0.25);
+  --font-h:'Syne',sans-serif;--font-b:'DM Sans',sans-serif;--r:16px;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html,body{height:100%;overflow:hidden;}
+body{background:var(--bg);color:var(--text);font-family:var(--font-b);display:flex;flex-direction:column;}
+
+/* NAV */
+.nav{position:relative;z-index:1000;padding:12px 0;background:rgba(8,12,24,0.95);backdrop-filter:blur(20px);border-bottom:1px solid var(--border);flex-shrink:0;}
+.nav-inner{padding:0 24px;display:flex;align-items:center;justify-content:space-between;gap:16px;}
+.nav-logo{display:flex;align-items:center;gap:10px;text-decoration:none;}
+.nav-logo-mark{width:32px;height:32px;background:linear-gradient(135deg,var(--teal),var(--blue));border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:16px;}
+.nav-logo-text{font-family:var(--font-h);font-size:1rem;font-weight:800;color:var(--text);}
+.nav-logo-text span{color:var(--teal);}
+.nav-badge{display:flex;align-items:center;gap:6px;background:rgba(0,212,170,0.1);border:1px solid rgba(0,212,170,0.3);border-radius:100px;padding:4px 12px 4px 8px;font-size:.72rem;font-weight:600;color:var(--teal);}
+.live-dot{width:6px;height:6px;border-radius:50%;background:var(--teal);box-shadow:0 0 6px var(--teal);animation:pulse-dot 2s infinite;}
+@keyframes pulse-dot{0%,100%{opacity:1;transform:scale(1);}50%{opacity:.4;transform:scale(.7);}}
+.nav-stats{display:flex;align-items:center;gap:20px;}
+.nav-stat{text-align:center;}
+.nav-stat-val{font-family:var(--font-h);font-size:1.1rem;font-weight:800;color:var(--text);line-height:1;}
+.nav-stat-lbl{font-size:.65rem;color:var(--text-d);text-transform:uppercase;letter-spacing:1px;margin-top:2px;}
+.nav-stat-val.teal{color:var(--teal);}
+.nav-stat-val.red{color:var(--red);}
+.nav-stat-val.blue{color:var(--blue);}
+.btn-vet{display:flex;align-items:center;gap:6px;background:var(--teal);color:var(--bg);font-family:var(--font-b);font-size:.8rem;font-weight:700;padding:8px 16px;border-radius:10px;border:none;cursor:pointer;text-decoration:none;position:relative;overflow:hidden;}
+.btn-vet::after{content:'';position:absolute;inset:0;background:linear-gradient(90deg,transparent,rgba(255,255,255,0.2),transparent);transform:translateX(-100%);animation:shimmer 3s infinite;}
+@keyframes shimmer{to{transform:translateX(200%);}}
+
+/* LAYOUT */
+.app-body{display:flex;flex:1;overflow:hidden;}
+
+/* SIDEBAR */
+.sidebar{width:380px;flex-shrink:0;background:var(--bg2);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;position:relative;z-index:10;}
+.sidebar::before{content:'';position:absolute;inset:0;pointer-events:none;background-image:linear-gradient(rgba(0,212,170,0.03) 1px,transparent 1px),linear-gradient(90deg,rgba(0,212,170,0.03) 1px,transparent 1px);background-size:40px 40px;}
+.sidebar-header{padding:20px 20px 16px;border-bottom:1px solid var(--border);position:relative;z-index:1;flex-shrink:0;}
+.sidebar-title{font-family:var(--font-h);font-size:1.1rem;font-weight:800;color:var(--text);margin-bottom:4px;}
+.sidebar-sub{font-size:.78rem;color:var(--text-m);}
+.filters{display:flex;gap:6px;margin-top:14px;flex-wrap:wrap;}
+.filter-btn{display:flex;align-items:center;gap:5px;padding:5px 12px;border-radius:20px;font-family:var(--font-b);font-size:.72rem;font-weight:600;border:1px solid var(--border);background:var(--surface);color:var(--text-m);cursor:pointer;transition:all .2s;}
+.filter-btn:hover{border-color:var(--teal);color:var(--teal);}
+.filter-btn.active{background:rgba(0,212,170,0.12);border-color:var(--teal);color:var(--teal);}
+.filter-btn.red.active{background:rgba(255,77,109,0.12);border-color:var(--red);color:var(--red);}
+.filter-btn.blue.active{background:rgba(79,142,247,0.12);border-color:var(--blue);color:var(--blue);}
+.filter-btn.amber.active{background:rgba(245,158,11,0.12);border-color:var(--amber);color:var(--amber);}
+.filter-dot{width:6px;height:6px;border-radius:50%;}
+.search-wrap{padding:12px 20px;border-bottom:1px solid var(--border);flex-shrink:0;position:relative;z-index:1;}
+.search-input{width:100%;padding:9px 14px 9px 36px;background:var(--surface);border:1px solid var(--border);border-radius:10px;color:var(--text);font-family:var(--font-b);font-size:.82rem;outline:none;transition:border-color .2s;}
+.search-input::placeholder{color:var(--text-d);}
+.search-input:focus{border-color:var(--border2);}
+.search-icon{position:absolute;left:32px;top:50%;transform:translateY(-50%);color:var(--text-d);}
+.listings-scroll{flex:1;overflow-y:auto;padding:12px;position:relative;z-index:1;}
+.listings-scroll::-webkit-scrollbar{width:4px;}
+.listings-scroll::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px;}
+
+/* CAT CARDS */
+.cat-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:14px;margin-bottom:8px;cursor:pointer;transition:all .2s;position:relative;overflow:hidden;}
+.cat-card::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;border-radius:3px 0 0 3px;}
+.cat-card.available::before{background:var(--teal);}
+.cat-card.urgent::before{background:var(--red);}
+.cat-card.free::before{background:var(--blue);}
+.cat-card:hover{border-color:rgba(0,212,170,0.3);background:var(--surface2);transform:translateX(2px);}
+.cat-card.active{border-color:var(--border2);background:rgba(0,212,170,0.06);}
+.card-top{display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:8px;}
+.card-name{font-family:var(--font-h);font-size:.9rem;font-weight:700;color:var(--text);line-height:1.2;}
+.card-breed{font-size:.72rem;color:var(--text-m);margin-top:2px;}
+.card-price{font-family:var(--font-h);font-size:.82rem;font-weight:700;color:var(--teal);white-space:nowrap;flex-shrink:0;}
+.card-price.free-tag{color:var(--blue);}
+.card-meta{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+.meta-chip{display:flex;align-items:center;gap:4px;font-size:.68rem;color:var(--text-m);}
+.card-tags{display:flex;gap:4px;flex-wrap:wrap;margin-top:8px;}
+.tag{font-size:.64rem;font-weight:600;padding:2px 7px;border-radius:20px;border:1px solid;}
+.tag.teal{background:rgba(0,212,170,0.1);border-color:rgba(0,212,170,0.3);color:var(--teal);}
+.tag.red{background:rgba(255,77,109,0.1);border-color:rgba(255,77,109,0.3);color:var(--red);}
+.tag.blue{background:rgba(79,142,247,0.1);border-color:rgba(79,142,247,0.3);color:var(--blue);}
+.tag.gray{background:var(--surface);border-color:var(--border);color:var(--text-m);}
+.card-desc{font-size:.72rem;color:var(--text-m);line-height:1.5;margin-top:8px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
+.card-footer{display:flex;align-items:center;justify-content:space-between;margin-top:10px;padding-top:10px;border-top:1px solid var(--border);}
+.card-source{font-size:.65rem;color:var(--text-d);}
+.card-link{display:flex;align-items:center;gap:4px;font-size:.7rem;font-weight:600;color:var(--teal);text-decoration:none;padding:4px 10px;border-radius:6px;background:rgba(0,212,170,0.08);border:1px solid rgba(0,212,170,0.2);transition:all .2s;}
+.card-link:hover{background:rgba(0,212,170,0.15);}
+
+/* STATES */
+.loading-state{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px 20px;gap:12px;}
+.loading-ring{width:36px;height:36px;border:2px solid var(--border);border-top-color:var(--teal);border-radius:50%;animation:spin 1s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg);}}
+.loading-text{font-size:.8rem;color:var(--text-m);}
+.empty-state{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px 20px;gap:8px;text-align:center;}
+.empty-icon{font-size:32px;margin-bottom:4px;}
+.empty-text{font-size:.85rem;color:var(--text-m);}
+.empty-sub{font-size:.72rem;color:var(--text-d);}
+
+/* MAP */
+.map-wrap{flex:1;position:relative;}
+#map{width:100%;height:100%;background:var(--bg);}
+.leaflet-tile-pane{filter:brightness(0.85) saturate(0.9);}
+.leaflet-popup-content-wrapper{background:var(--bg2)!important;border:1px solid var(--border2)!important;border-radius:var(--r)!important;box-shadow:0 20px 60px rgba(0,0,0,0.5)!important;padding:0!important;}
+.leaflet-popup-content{margin:0!important;width:260px!important;}
+.leaflet-popup-tip-container{display:none;}
+.leaflet-popup-close-button{color:var(--text-m)!important;font-size:18px!important;top:10px!important;right:12px!important;}
+.map-overlay-tl{position:absolute;top:16px;left:16px;z-index:500;}
+.map-info-card{background:rgba(8,12,24,0.9);backdrop-filter:blur(12px);border:1px solid var(--border);border-radius:12px;padding:12px 16px;font-size:.72rem;color:var(--text-m);}
+.map-info-title{font-family:var(--font-h);font-size:.8rem;font-weight:700;color:var(--text);margin-bottom:8px;}
+.legend-item{display:flex;align-items:center;gap:7px;padding:3px 0;}
+.legend-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+.map-overlay-br{position:absolute;bottom:16px;right:16px;z-index:500;}
+.refresh-btn{display:flex;align-items:center;gap:6px;background:rgba(8,12,24,0.9);backdrop-filter:blur(12px);border:1px solid var(--border);border-radius:10px;padding:8px 14px;font-family:var(--font-b);font-size:.75rem;font-weight:600;color:var(--teal);cursor:pointer;transition:all .2s;}
+.refresh-btn:hover{border-color:var(--border2);}
+.refresh-icon.spinning{animation:spin 1s linear infinite;}
+.cat-pin{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;border:2px solid;cursor:pointer;transition:transform .15s;}
+.cat-pin:hover{transform:scale(1.2);}
+.cat-pin.available{background:rgba(0,212,170,0.2);border-color:var(--teal);box-shadow:0 0 12px rgba(0,212,170,0.4);}
+.cat-pin.urgent{background:rgba(255,77,109,0.2);border-color:var(--red);box-shadow:0 0 12px rgba(255,77,109,0.4);}
+.cat-pin.free{background:rgba(79,142,247,0.2);border-color:var(--blue);box-shadow:0 0 12px rgba(79,142,247,0.4);}
+.popup-body{padding:16px;}
+.popup-name{font-family:var(--font-h);font-size:.95rem;font-weight:800;color:var(--text);margin-bottom:2px;}
+.popup-breed{font-size:.72rem;color:var(--text-m);margin-bottom:10px;}
+.popup-row{display:flex;align-items:center;gap:6px;font-size:.72rem;color:var(--text-m);margin-bottom:5px;}
+.popup-price{font-family:var(--font-h);font-size:1rem;font-weight:800;color:var(--teal);margin:10px 0;}
+.popup-btns{display:flex;gap:8px;margin-top:12px;}
+.popup-btn{flex:1;padding:8px;border-radius:8px;font-family:var(--font-b);font-size:.72rem;font-weight:700;text-align:center;text-decoration:none;cursor:pointer;border:none;transition:all .2s;}
+.popup-btn-primary{background:var(--teal);color:var(--bg);}
+.popup-btn-ghost{background:var(--surface2);color:var(--text-m);border:1px solid var(--border);}
+.popup-btn-ghost:hover{border-color:var(--border2);color:var(--teal);}
+
+/* DEBUG BOX */
+.debug-box{position:absolute;bottom:60px;right:16px;z-index:600;background:rgba(8,12,24,0.95);border:1px solid var(--border);border-radius:10px;padding:12px 16px;font-size:.7rem;color:var(--text-m);max-width:300px;display:none;}
+</style>
+</head>
+<body>
+<nav class="nav">
+  <div class="nav-inner">
+    <a class="nav-logo" href="#">
+      <div class="nav-logo-mark">🐱</div>
+      <span class="nav-logo-text">tele<span>vet</span>.pk</span>
+    </a>
+    <div class="nav-badge"><div class="live-dot"></div>Cat Adoption Radar · Live</div>
+    <div class="nav-stats">
+      <div class="nav-stat"><div class="nav-stat-val teal" id="stat-total">—</div><div class="nav-stat-lbl">Listings</div></div>
+      <div class="nav-stat"><div class="nav-stat-val" id="stat-cities">—</div><div class="nav-stat-lbl">Cities</div></div>
+      <div class="nav-stat"><div class="nav-stat-val red" id="stat-urgent">—</div><div class="nav-stat-lbl">Urgent</div></div>
+      <div class="nav-stat"><div class="nav-stat-val blue" id="stat-free">—</div><div class="nav-stat-lbl">Free</div></div>
+    </div>
+    <a class="btn-vet" href="https://televet.pk" target="_blank">Book Vet Check</a>
+  </div>
+</nav>
+
+<div class="app-body">
+  <aside class="sidebar">
+    <div class="sidebar-header">
+      <div class="sidebar-title">Available Cats</div>
+      <div class="sidebar-sub">Scraped from OLX Pakistan · auto-updated</div>
+      <div class="filters">
+        <button class="filter-btn active" onclick="setFilter('all',this)"><div class="filter-dot" style="background:var(--teal)"></div>All</button>
+        <button class="filter-btn red"   onclick="setFilter('urgent',this)"><div class="filter-dot" style="background:var(--red)"></div>Urgent</button>
+        <button class="filter-btn blue"  onclick="setFilter('free',this)"><div class="filter-dot" style="background:var(--blue)"></div>Free</button>
+        <button class="filter-btn amber" onclick="setFilter('sale',this)"><div class="filter-dot" style="background:var(--amber)"></div>For Sale</button>
+      </div>
+    </div>
+    <div class="search-wrap">
+      <svg class="search-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+      <input class="search-input" placeholder="Search breed, city..." oninput="onSearch(this.value)">
+    </div>
+    <div class="listings-scroll" id="listings-scroll">
+      <div class="loading-state"><div class="loading-ring"></div><div class="loading-text">Loading listings...</div></div>
+    </div>
+  </aside>
+
+  <div class="map-wrap">
+    <div id="map"></div>
+    <div class="map-overlay-tl">
+      <div class="map-info-card">
+        <div class="map-info-title">Map Legend</div>
+        <div class="legend-item"><div class="legend-dot" style="background:var(--teal)"></div>Available</div>
+        <div class="legend-item"><div class="legend-dot" style="background:var(--red)"></div>Urgent</div>
+        <div class="legend-item"><div class="legend-dot" style="background:var(--blue)"></div>Free / Adoption</div>
+      </div>
+    </div>
+    <div class="map-overlay-br">
+      <button class="refresh-btn" onclick="loadData()">
+        <svg class="refresh-icon" id="refresh-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+        Refresh listings
+      </button>
+    </div>
+    <div class="debug-box" id="debug-box"></div>
+  </div>
+</div>
+
+<script>
+// ============================================================
+//  ⚠️  PASTE YOUR PUBLISHED CSV URL BELOW
+//  How to get it:
+//  1. Open your Google Sheet
+//  2. File → Share → Publish to web
+//  3. Choose "Comma-separated values (.csv)" → Publish
+//  4. Copy the URL and paste it below
+// ============================================================
+
+const PUBLISHED_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQ1WTdQBtcK-HGJ0lhOpwTz47nLAqS_8S09JBeAAe7OoY60BbTZWxd1jZyrnz4PYZMoVnCZh6l81ZtE/pub?output=csv";
+
+// ============================================================
+
+let allCats = [], markers = [], map = null;
+let activeFilter = "all", searchTerm = "", activeCard = null;
+
+const CITY_COORDS = {
+  "Karachi":[24.8607,67.0011],"Lahore":[31.5204,74.3587],
+  "Islamabad":[33.6844,73.0479],"Rawalpindi":[33.6007,73.0679],
+  "Faisalabad":[31.4504,73.1350],"Multan":[30.1575,71.5249],
+  "Peshawar":[34.0151,71.5249],"Quetta":[30.1798,66.9750],
+  "Sialkot":[32.4945,74.5229],"Gujranwala":[32.1877,74.1945],
+  "Sargodha":[32.0836,72.6711],"Sahiwal":[30.6682,73.1066],
+  "Wah":[33.7667,72.7167],"Sheikhupura":[31.7167,73.9833],
+  "Layyah":[30.9598,70.9389],"Bahawalpur":[29.3956,71.6836],
+};
+
+function debug(msg) {
+  console.log(msg);
+  const box = document.getElementById('debug-box');
+  box.style.display = 'block';
+  box.innerHTML += msg + '<br>';
+}
+
+function initMap() {
+  map = L.map('map', { center:[30.3753,69.3451], zoom:6, zoomControl:false });
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+    attribution:'© OpenStreetMap © CARTO', maxZoom:18,
+  }).addTo(map);
+  L.control.zoom({ position:'bottomleft' }).addTo(map);
+}
+
+async function loadData() {
+  if (!PUBLISHED_CSV_URL || PUBLISHED_CSV_URL === "PASTE_YOUR_PUBLISHED_CSV_URL_HERE") {
+    showEmptyState("Paste your Published CSV URL into the HTML file");
+    debug("⚠️ No URL set — open the HTML file and paste your Published CSV URL");
+    return;
+  }
+
+  document.getElementById('refresh-icon').classList.add('spinning');
+  showLoading();
+  debug("🔄 Fetching: " + PUBLISHED_CSV_URL.substring(0,60) + "...");
+
+  try {
+    const resp = await fetch(PUBLISHED_CSV_URL);
+    debug("📡 Status: " + resp.status + " " + resp.statusText);
+
+    if (!resp.ok) throw new Error("HTTP " + resp.status);
+
+    const text = await resp.text();
+    debug("📄 Got " + text.length + " chars");
+    debug("📄 First 100: " + text.substring(0,100));
+
+    const cats = parseCSV(text);
+    debug("🐱 Parsed " + cats.length + " cats");
+
+    allCats = cats;
+    renderAll();
+    updateStats();
+
+  } catch(err) {
+    debug("❌ Error: " + err.message);
+    showEmptyState("Could not load. See debug info bottom-right.");
+  }
+
+  document.getElementById('refresh-icon').classList.remove('spinning');
+}
+
+function parseCSV(text) {
+  // remove BOM if present
+  text = text.replace(/^\uFEFF/, '');
+  const lines = text.split('\n').map(l => l.trim()).filter(l => l);
+  debug("📊 Lines: " + lines.length);
+  if (lines.length < 2) return [];
+
+  const headers = splitCSVLine(lines[0]);
+  debug("📊 Headers: " + headers.join(' | '));
+
+  const cats = [];
+  for (let i = 1; i < lines.length; i++) {
+    const vals = splitCSVLine(lines[i]);
+    const row  = {};
+    headers.forEach((h,idx) => { row[h.trim()] = (vals[idx]||"").trim(); });
+
+    const cat = {
+      name:        row["Cat Name"]      || "Unknown",
+      breed:       row["Breed"]         || "Not specified",
+      age:         row["Age"]           || "",
+      gender:      row["Gender"]        || "",
+      color:       row["Color"]         || "",
+      price:       row["Price"]         || "Not listed",
+      city:        row["City"]          || "",
+      hood:        row["Neighbourhood"] || "",
+      health:      row["Health Status"] || "",
+      urgency:     (row["Urgency"]      || "normal").toLowerCase(),
+      type:        (row["Listing Type"] || "sale").toLowerCase(),
+      contact:     row["Contact Info"]  || "",
+      description: row["Description"]   || "",
+      source:      row["Source"]        || "OLX",
+      scraped:     row["Scraped At"]    || "",
+      url:         row["Original URL"]  || "",
+    };
+
+    if (cat.urgency === "urgent") cat.status = "urgent";
+    else if (cat.type === "free" || cat.price.toLowerCase().includes("free")) cat.status = "free";
+    else if (cat.type === "adoption") cat.status = "free";
+    else cat.status = "available";
+
+    cat.coords = getCityCoords(cat.city);
+    cats.push(cat);
+  }
+  return cats;
+}
+
+function splitCSVLine(line) {
+  const res = []; let cur = ""; let q = false;
+  for (let i = 0; i < line.length; i++) {
+    const c = line[i];
+    if (c === '"') { q = !q; }
+    else if (c === ',' && !q) { res.push(cur); cur = ""; }
+    else { cur += c; }
+  }
+  res.push(cur);
+  return res;
+}
+
+function getCityCoords(city) {
+  if (!city) return [30.3753 + (Math.random()-.5)*4, 69.3451 + (Math.random()-.5)*4];
+  for (const [name, coords] of Object.entries(CITY_COORDS)) {
+    if (city.includes(name)) {
+      return [coords[0]+(Math.random()-.5)*0.08, coords[1]+(Math.random()-.5)*0.08];
+    }
+  }
+  return [30.3753+(Math.random()-.5)*8, 69.3451+(Math.random()-.5)*8];
+}
+
+function getFiltered() {
+  return allCats.filter(cat => {
+    const mf = activeFilter==="all"
+      || (activeFilter==="urgent" && cat.status==="urgent")
+      || (activeFilter==="free"   && cat.status==="free")
+      || (activeFilter==="sale"   && cat.status==="available");
+    const q = searchTerm.toLowerCase();
+    const ms = !q || cat.name.toLowerCase().includes(q)
+      || cat.breed.toLowerCase().includes(q)
+      || cat.city.toLowerCase().includes(q);
+    return mf && ms;
+  });
+}
+
+function renderAll() { renderSidebar(); renderPins(); }
+
+function renderSidebar() {
+  const cats = getFiltered();
+  const el   = document.getElementById('listings-scroll');
+  if (!cats.length) { showEmptyState("No listings match your filter"); return; }
+  el.innerHTML = cats.map((cat,i) => `
+    <div class="cat-card ${cat.status}" id="card-${i}" onclick="focusCat(${i})">
+      <div class="card-top">
+        <div>
+          <div class="card-name">${esc(cat.name)}</div>
+          <div class="card-breed">${esc(cat.breed)}${cat.age?' · '+esc(cat.age):''}${cat.gender&&cat.gender!=='Unknown'?' · '+esc(cat.gender):''}</div>
+        </div>
+        <div class="card-price ${cat.status==='free'?'free-tag':''}">${esc(cat.price)}</div>
+      </div>
+      <div class="card-meta">
+        ${cat.city?`<div class="meta-chip"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>${esc(cat.city)}${cat.hood&&cat.hood!=='Not specified'?' · '+esc(cat.hood):''}</div>`:''}
+      </div>
+      <div class="card-tags">
+        ${cat.status==='urgent'?'<span class="tag red">Urgent</span>':''}
+        ${cat.status==='free'?'<span class="tag blue">Free</span>':''}
+        ${cat.health&&cat.health!=='Not mentioned'?`<span class="tag teal">${esc(cat.health)}</span>`:''}
+        ${cat.color&&cat.color!=='Not mentioned'?`<span class="tag gray">${esc(cat.color)}</span>`:''}
+      </div>
+      ${cat.description?`<div class="card-desc">${esc(cat.description)}</div>`:''}
+      <div class="card-footer">
+        <div class="card-source">via ${esc(cat.source)}</div>
+        ${cat.url?`<a class="card-link" href="${esc(cat.url)}" target="_blank" onclick="event.stopPropagation()">View listing ↗</a>`:''}
+      </div>
+    </div>`).join('');
+}
+
+function renderPins() {
+  markers.forEach(m => map.removeLayer(m));
+  markers = [];
+  getFiltered().forEach((cat,i) => {
+    if (!cat.coords) return;
+    const icon = L.divIcon({
+      className:'',
+      html:`<div class="cat-pin ${cat.status}">🐱</div>`,
+      iconSize:[28,28], iconAnchor:[14,14],
+    });
+    const m = L.marker(cat.coords, {icon}).addTo(map)
+      .bindPopup(`<div class="popup-body">
+        <div class="popup-name">${esc(cat.name)}</div>
+        <div class="popup-breed">${esc(cat.breed)}</div>
+        ${cat.city?`<div class="popup-row">📍 ${esc(cat.city)}${cat.hood&&cat.hood!=='Not specified'?', '+esc(cat.hood):''}</div>`:''}
+        ${cat.contact&&cat.contact!=='See link'?`<div class="popup-row">📞 ${esc(cat.contact)}</div>`:''}
+        <div class="popup-price">${esc(cat.price)}</div>
+        <div class="popup-btns">
+          <a class="popup-btn popup-btn-primary" href="https://televet.pk" target="_blank">Book Vet Check</a>
+          ${cat.url?`<a class="popup-btn popup-btn-ghost" href="${esc(cat.url)}" target="_blank">OLX</a>`:''}
+        </div>
+      </div>`, {maxWidth:280});
+    m.on('click', () => highlightCard(i));
+    markers.push(m);
+  });
+}
+
+function focusCat(i) {
+  const cat = getFiltered()[i];
+  if (!cat?.coords) return;
+  highlightCard(i);
+  map.flyTo(cat.coords, 13, {duration:1.2});
+  if (markers[i]) markers[i].openPopup();
+}
+
+function highlightCard(i) {
+  if (activeCard !== null) document.getElementById(`card-${activeCard}`)?.classList.remove('active');
+  activeCard = i;
+  const el = document.getElementById(`card-${i}`);
+  if (el) { el.classList.add('active'); el.scrollIntoView({behavior:'smooth',block:'nearest'}); }
+}
+
+function setFilter(f, btn) {
+  activeFilter = f;
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  activeCard = null;
+  renderAll();
+}
+
+function onSearch(v) { searchTerm = v; activeCard = null; renderAll(); }
+
+function updateStats() {
+  document.getElementById('stat-total').textContent  = allCats.length || '—';
+  document.getElementById('stat-cities').textContent = new Set(allCats.map(c=>c.city).filter(Boolean)).size || '—';
+  document.getElementById('stat-urgent').textContent = allCats.filter(c=>c.status==='urgent').length || '—';
+  document.getElementById('stat-free').textContent   = allCats.filter(c=>c.status==='free').length || '—';
+}
+
+function showLoading() {
+  document.getElementById('listings-scroll').innerHTML = `<div class="loading-state"><div class="loading-ring"></div><div class="loading-text">Loading listings...</div></div>`;
+}
+function showEmptyState(msg) {
+  document.getElementById('listings-scroll').innerHTML = `<div class="empty-state"><div class="empty-icon">🐱</div><div class="empty-text">${msg}</div><div class="empty-sub">Run your scraper to populate listings</div></div>`;
+}
+function esc(s) {
+  if (!s) return '';
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+initMap();
+loadData();
+</script>
+</body>
+</html>
