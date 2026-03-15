@@ -4,131 +4,177 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Cat Adoption Radar — Pakistan</title>
-<meta name="description" content="Find cats available for adoption across Pakistan. Live listings scraped automatically.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <style>
-:root {
-  --bg:#04080f;--bg2:#020508;--teal:#00d4aa;--blue:#4f8ef7;--red:#ff4d6d;
-  --text:#e8eaf0;--text-m:#9aa5b8;--text-d:#4a5568;
-  --border:rgba(255,255,255,0.07);--border-teal:rgba(0,212,170,0.15);
+:root{
+  --bg:#020608;--bg2:#030c10;--bg3:#040f14;
+  --teal:#00d4aa;--red:#ff4d6d;--blue:#4f8ef7;
+  --text:#e8eaf0;--text-m:#9aa5b8;--text-d:#3a4a58;
+  --border:rgba(0,212,170,0.12);--border2:rgba(255,255,255,0.06);
   --font-h:'Syne',sans-serif;--font-m:'DM Mono',monospace;
 }
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
 html,body{height:100%;overflow:hidden;}
 body{background:var(--bg);color:var(--text);font-family:var(--font-m);display:flex;flex-direction:column;}
-.nav{height:46px;background:var(--bg2);border-bottom:1px solid var(--border-teal);display:flex;align-items:center;padding:0 18px;gap:16px;position:relative;z-index:1000;flex-shrink:0;}
-.n-pulse{width:6px;height:6px;border-radius:50%;background:var(--teal);animation:np 1.4s infinite;flex-shrink:0;}
-@keyframes np{0%,100%{opacity:1}50%{opacity:0.2}}
-.n-title{font-family:var(--font-h);font-size:18px;font-weight:800;color:var(--text);letter-spacing:-0.5px;white-space:nowrap;}
+body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:9999;background:repeating-linear-gradient(0deg,transparent,transparent 3px,rgba(0,212,170,0.012) 3px,rgba(0,212,170,0.012) 4px);}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.2}}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes ticker{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}
+@keyframes ping{0%{transform:scale(1);opacity:.5}100%{transform:scale(2.4);opacity:0}}
+
+.nav{height:48px;background:rgba(2,6,8,0.97);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 16px;gap:14px;position:relative;z-index:1000;flex-shrink:0;}
+.n-logo-wrap{display:flex;align-items:center;gap:9px;}
+.n-logo-icon{width:26px;height:26px;border:1px solid rgba(0,212,170,0.35);border-radius:4px;display:flex;align-items:center;justify-content:center;}
+.n-logo-icon svg{width:13px;height:13px;color:var(--teal);}
+.n-title{font-family:var(--font-h);font-size:16px;font-weight:800;color:var(--text);letter-spacing:-.3px;white-space:nowrap;}
 .n-title em{color:var(--teal);font-style:normal;}
-.n-sep{width:1px;height:20px;background:rgba(255,255,255,0.06);flex-shrink:0;}
-.n-tabs{display:flex;gap:2px;}
-.n-tab{font-family:var(--font-m);font-size:9px;letter-spacing:1.5px;text-transform:uppercase;padding:5px 12px;border-radius:3px;color:var(--text-d);cursor:pointer;border:1px solid transparent;transition:all .2s;}
-.n-tab.on{color:var(--teal);border-color:rgba(0,212,170,0.2);background:rgba(0,212,170,0.06);}
-.n-tab:hover:not(.on){color:var(--text-m);border-color:var(--border);}
-.n-right{margin-left:auto;display:flex;align-items:center;gap:16px;}
+.n-sep{width:1px;height:18px;background:var(--border2);}
+.n-live{display:flex;align-items:center;gap:6px;font-size:8px;letter-spacing:2.5px;color:var(--teal);text-transform:uppercase;border:1px solid rgba(0,212,170,0.25);padding:3px 9px;border-radius:2px;}
+.n-live-dot{width:5px;height:5px;border-radius:50%;background:var(--teal);animation:blink 1.3s infinite;}
+.n-tabs{display:flex;gap:1px;}
+.n-tab{font-family:var(--font-m);font-size:8px;letter-spacing:1.5px;text-transform:uppercase;padding:5px 11px;border-radius:2px;color:var(--text-d);cursor:pointer;border:1px solid transparent;transition:all .15s;}
+.n-tab.on{color:var(--teal);border-color:rgba(0,212,170,0.2);background:rgba(0,212,170,0.05);}
+.n-tab:hover:not(.on){color:var(--text-m);border-color:var(--border2);}
+.n-right{margin-left:auto;display:flex;align-items:center;gap:18px;}
 .n-stats{display:flex;gap:20px;}
-.n-stat{display:flex;flex-direction:column;gap:1px;align-items:flex-end;}
-.n-lbl{font-size:8px;letter-spacing:1.5px;color:var(--text-d);text-transform:uppercase;}
-.n-val{font-family:var(--font-h);font-size:13px;font-weight:800;line-height:1;color:var(--text);}
+.n-stat{display:flex;flex-direction:column;align-items:flex-end;gap:1px;}
+.n-lbl{font-size:7px;letter-spacing:2px;color:var(--text-d);text-transform:uppercase;}
+.n-val{font-family:var(--font-h);font-size:14px;font-weight:800;line-height:1;}
 .n-val.t{color:var(--teal);}.n-val.r{color:var(--red);}.n-val.b{color:var(--blue);}
-.n-cta{font-family:var(--font-m);font-size:9px;letter-spacing:1.5px;text-transform:uppercase;background:transparent;color:var(--teal);padding:7px 14px;border-radius:4px;font-weight:500;border:1px solid rgba(0,212,170,0.4);cursor:pointer;text-decoration:none;display:flex;align-items:center;transition:all .2s;white-space:nowrap;}
-.n-cta:hover{background:rgba(0,212,170,0.08);}
+.n-cta{font-family:var(--font-m);font-size:8px;letter-spacing:1.5px;text-transform:uppercase;background:transparent;color:var(--teal);padding:6px 14px;border-radius:2px;font-weight:500;border:1px solid rgba(0,212,170,0.4);cursor:pointer;text-decoration:none;display:flex;align-items:center;gap:5px;transition:all .2s;white-space:nowrap;}
+.n-cta:hover{background:rgba(0,212,170,0.07);}
+.n-cta svg{width:10px;height:10px;}
+
+.body-wrap{flex:1;display:flex;overflow:hidden;position:relative;}
+
 .map-wrap{flex:1;position:relative;overflow:hidden;}
 #map{width:100%;height:100%;}
-.leaflet-tile-pane{filter:brightness(0.85) saturate(0.6);}
-.leaflet-control-attribution{display:none !important;}
-.leaflet-control-zoom{display:none !important;}
-.leaflet-tile{width:257px !important;height:257px !important;}
-/* FIXED — mask removed, no more horizontal lines */
+.leaflet-tile{width:257px!important;height:257px!important;}
+.leaflet-tile-pane{filter:brightness(0.8) saturate(0.5) contrast(1.05);}
+.leaflet-control-attribution{display:none!important;}
+.leaflet-control-zoom{display:none!important;}
+.leaflet-popup-content-wrapper{background:rgba(2,6,8,0.98)!important;border:1px solid var(--border)!important;border-radius:4px!important;box-shadow:0 20px 60px rgba(0,0,0,0.8)!important;padding:0!important;}
+.leaflet-popup-content{margin:0!important;width:230px!important;}
+.leaflet-popup-tip-container{display:none!important;}
+.leaflet-popup-close-button{color:var(--text-d)!important;font-size:14px!important;top:10px!important;right:10px!important;}
+.leaflet-popup-close-button:hover{color:var(--text)!important;}
 
-.float-panel{position:absolute;top:14px;left:14px;z-index:500;width:240px;background:rgba(2,5,8,0.97);border:1px solid var(--border-teal);border-radius:8px;overflow:hidden;transition:width .3s ease;}
-.float-panel.collapsed{width:40px;}
-.fp-head{padding:11px 13px;border-bottom:1px solid rgba(255,255,255,0.05);display:flex;align-items:center;gap:8px;}
-.fp-head-icon{flex-shrink:0;display:flex;}
-.fp-head-icon svg{width:15px;height:15px;color:var(--teal);}
-.fp-head-title{font-size:9px;letter-spacing:2.5px;color:var(--teal);text-transform:uppercase;flex:1;white-space:nowrap;overflow:hidden;}
-.fp-collapse{width:18px;height:18px;border-radius:3px;border:1px solid rgba(255,255,255,0.08);display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;transition:background .15s;}
-.fp-collapse:hover{background:rgba(255,255,255,0.05);}
-.fp-collapse svg{width:10px;height:10px;color:var(--text-d);transition:transform .3s;}
-.float-panel.collapsed .fp-collapse svg{transform:rotate(180deg);}
-.fp-search{margin:9px 12px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);border-radius:4px;padding:6px 10px;display:flex;align-items:center;gap:7px;}
-.fp-search svg{width:11px;height:11px;color:var(--text-d);flex-shrink:0;}
-.fp-search input{background:transparent;border:none;outline:none;font-family:var(--font-m);font-size:10px;color:var(--text);width:100%;}
-.fp-search input::placeholder{color:var(--text-d);}
-.fp-filters{display:flex;gap:4px;padding:0 12px 9px;}
-.fp-f{font-size:8px;letter-spacing:1px;text-transform:uppercase;padding:3px 8px;border-radius:2px;border:1px solid rgba(255,255,255,0.07);color:var(--text-d);cursor:pointer;display:flex;align-items:center;gap:4px;transition:all .15s;font-family:var(--font-m);}
-.fp-f:hover{color:var(--text-m);border-color:rgba(255,255,255,0.12);}
-.fp-f.on{border-color:rgba(0,212,170,0.35);color:var(--teal);background:rgba(0,212,170,0.06);}
-.fp-f-dot{width:4px;height:4px;border-radius:50%;flex-shrink:0;}
-.fp-list{overflow-y:auto;max-height:260px;}
-.fp-list::-webkit-scrollbar{width:3px;}
-.fp-list::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.06);border-radius:2px;}
-.fp-item{padding:9px 13px;border-bottom:1px solid rgba(255,255,255,0.04);display:flex;align-items:center;gap:9px;cursor:pointer;transition:background .15s;}
-.fp-item:hover{background:rgba(0,212,170,0.04);}
-.fp-item.active{background:rgba(0,212,170,0.06);}
-.fp-item-line{width:2px;height:30px;border-radius:1px;flex-shrink:0;}
-.fp-item-info{flex:1;min-width:0;}
-.fp-item-name{font-size:11px;color:#c8d0e0;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.fp-item-meta{font-size:9px;color:var(--text-d);display:flex;align-items:center;gap:4px;}
-.fp-item-meta svg{flex-shrink:0;}
-.fp-item-price{font-family:var(--font-h);font-size:11px;font-weight:800;flex-shrink:0;}
-.fp-item-badge{font-size:7px;letter-spacing:1px;padding:2px 5px;border-radius:2px;border:1px solid;}
-.fp-empty{padding:24px 16px;text-align:center;font-size:10px;color:var(--text-d);letter-spacing:0.5px;line-height:1.7;}
-.fp-legend{border-top:1px solid rgba(255,255,255,0.05);padding:8px 13px;display:flex;gap:14px;}
-.fp-leg-item{display:flex;align-items:center;gap:5px;font-size:8px;color:var(--text-d);letter-spacing:0.5px;}
-.fp-leg-dot{width:5px;height:5px;border-radius:50%;flex-shrink:0;}
-.float-panel.collapsed .fp-search,.float-panel.collapsed .fp-filters,.float-panel.collapsed .fp-list,.float-panel.collapsed .fp-legend,.float-panel.collapsed .fp-head-title{display:none;}
-.stats-strip{position:absolute;bottom:14px;left:50%;transform:translateX(-50%);z-index:500;}
-.ss-pill{background:rgba(2,5,8,0.97);border:1px solid rgba(255,255,255,0.07);border-radius:100px;padding:8px 22px;display:flex;align-items:center;gap:16px;white-space:nowrap;}
-.ss-item{display:flex;flex-direction:column;align-items:center;gap:2px;}
-.ss-lbl{font-size:8px;letter-spacing:1.5px;color:var(--text-d);text-transform:uppercase;}
-.ss-val{font-family:var(--font-h);font-size:15px;font-weight:800;line-height:1;}
-.ss-divider{width:1px;height:26px;background:rgba(255,255,255,0.06);}
-.map-hud{position:absolute;top:14px;right:14px;display:flex;flex-direction:column;gap:5px;z-index:500;align-items:flex-end;}
-.hud-row{background:rgba(2,5,8,0.95);border:1px solid rgba(255,255,255,0.07);border-radius:100px;padding:5px 12px;display:flex;align-items:center;gap:7px;font-size:9px;color:var(--text-d);letter-spacing:1px;}
-.hud-row span{color:var(--text-m);}
+.map-scanlines{position:absolute;inset:0;pointer-events:none;z-index:200;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.07) 2px,rgba(0,0,0,0.07) 3px);}
+
+.city-hud{position:absolute;top:12px;left:12px;z-index:500;display:flex;flex-direction:column;gap:4px;}
+.ch-row{background:rgba(2,6,8,0.88);border:1px solid var(--border);padding:5px 10px;border-radius:2px;display:flex;align-items:center;gap:10px;font-size:8px;letter-spacing:.5px;transition:border-color .2s;cursor:default;}
+.ch-row:hover{border-color:rgba(0,212,170,0.3);}
+.ch-code{font-family:var(--font-h);font-size:11px;font-weight:800;color:var(--teal);min-width:28px;}
+.ch-name{color:var(--text-d);min-width:64px;}
+.ch-bar-wrap{width:48px;height:2px;background:rgba(255,255,255,0.05);border-radius:1px;overflow:hidden;}
+.ch-bar{height:100%;background:var(--teal);border-radius:1px;transition:width .6s ease;}
+.ch-count{color:var(--text-m);font-size:8px;min-width:16px;text-align:right;}
+.ch-urgent{color:var(--red);font-size:7px;letter-spacing:1px;}
+
+.map-hud-tr{position:absolute;top:12px;right:12px;z-index:500;display:flex;flex-direction:column;gap:4px;align-items:flex-end;}
+.hud-pill{background:rgba(2,6,8,0.88);border:1px solid var(--border2);border-radius:100px;padding:4px 10px;display:flex;align-items:center;gap:6px;font-size:8px;color:var(--text-d);letter-spacing:1px;}
+.hud-pill svg{width:9px;height:9px;}
+.hud-pill span{color:var(--text-m);}
 .hud-dot{width:5px;height:5px;border-radius:50%;flex-shrink:0;}
-.zoom-ctrl{position:absolute;bottom:14px;right:14px;display:flex;flex-direction:column;gap:2px;z-index:500;}
-.zoom-btn{width:28px;height:28px;background:rgba(2,5,8,0.95);border:1px solid rgba(255,255,255,0.08);border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:16px;color:var(--text-d);cursor:pointer;font-family:monospace;line-height:1;transition:all .15s;user-select:none;}
-.zoom-btn:hover{color:var(--text-m);border-color:rgba(255,255,255,0.15);}
-.leaflet-popup-content-wrapper{background:rgba(2,5,8,0.98) !important;border:1px solid var(--border-teal) !important;border-radius:8px !important;box-shadow:0 20px 60px rgba(0,0,0,0.7) !important;padding:0 !important;}
-.leaflet-popup-content{margin:0 !important;width:240px !important;}
-.leaflet-popup-tip-container{display:none !important;}
-.leaflet-popup-close-button{color:var(--text-d) !important;font-size:16px !important;top:10px !important;right:12px !important;z-index:10;}
-.leaflet-popup-close-button:hover{color:var(--text) !important;}
-.pu{padding:16px;}
-.pu-name{font-family:var(--font-h);font-size:14px;font-weight:800;color:var(--text);margin-bottom:2px;}
-.pu-breed{font-size:10px;color:var(--text-d);margin-bottom:10px;letter-spacing:0.5px;}
-.pu-row{display:flex;align-items:center;gap:6px;font-size:10px;color:var(--text-m);margin-bottom:5px;}
-.pu-row svg{flex-shrink:0;}
-.pu-price{font-family:var(--font-h);font-size:15px;font-weight:800;margin:10px 0 12px;}
-.pu-btns{display:flex;gap:8px;}
-.pu-btn{flex:1;padding:8px;border-radius:4px;font-family:var(--font-m);font-size:9px;font-weight:500;letter-spacing:1px;text-transform:uppercase;text-align:center;text-decoration:none;cursor:pointer;border:none;transition:all .2s;}
-.pu-btn-primary{background:var(--teal);color:var(--bg2);}
+
+.zoom-ctrl{position:absolute;bottom:50px;right:12px;display:flex;flex-direction:column;gap:2px;z-index:500;}
+.zoom-btn{width:26px;height:26px;background:rgba(2,6,8,0.9);border:1px solid var(--border2);border-radius:2px;display:flex;align-items:center;justify-content:center;font-size:15px;color:var(--text-d);cursor:pointer;font-family:monospace;line-height:1;transition:all .15s;user-select:none;}
+.zoom-btn:hover{color:var(--text-m);border-color:rgba(0,212,170,0.2);}
+
+.pu{padding:14px;}
+.pu-name{font-family:var(--font-h);font-size:13px;font-weight:800;color:var(--text);margin-bottom:1px;}
+.pu-breed{font-size:9px;color:var(--text-d);margin-bottom:8px;letter-spacing:.5px;}
+.pu-row{display:flex;align-items:center;gap:5px;font-size:9px;color:var(--text-m);margin-bottom:4px;}
+.pu-row svg{flex-shrink:0;width:10px;height:10px;}
+.pu-price{font-family:var(--font-h);font-size:14px;font-weight:800;margin:8px 0 10px;}
+.pu-btns{display:flex;gap:6px;}
+.pu-btn{flex:1;padding:7px;border-radius:2px;font-family:var(--font-m);font-size:8px;font-weight:500;letter-spacing:1px;text-transform:uppercase;text-align:center;text-decoration:none;cursor:pointer;border:none;transition:all .2s;}
+.pu-btn-primary{background:var(--teal);color:#020608;}
 .pu-btn-primary:hover{opacity:.85;}
-.pu-btn-ghost{background:transparent;color:var(--text-m);border:1px solid rgba(255,255,255,0.1);}
-.pu-btn-ghost:hover{border-color:var(--border-teal);color:var(--teal);}
-.cat-pin{width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;border:1.5px solid;cursor:pointer;transition:transform .15s;}
-.cat-pin:hover{transform:scale(1.25);}
+.pu-btn-ghost{background:transparent;color:var(--text-m);border:1px solid var(--border2);}
+.pu-btn-ghost:hover{border-color:var(--border);color:var(--teal);}
+
+.cat-pin{width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;border:1.5px solid;cursor:pointer;transition:transform .15s;position:relative;}
+.cat-pin:hover{transform:scale(1.3);}
 .cat-pin.available{background:rgba(0,212,170,0.15);border-color:var(--teal);}
 .cat-pin.urgent{background:rgba(255,77,109,0.15);border-color:var(--red);}
 .cat-pin.free{background:rgba(79,142,247,0.15);border-color:var(--blue);}
-.cat-pin svg{width:10px;height:10px;}
-.fp-loading{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:28px 16px;gap:10px;}
-.fp-spinner{width:24px;height:24px;border:2px solid rgba(255,255,255,0.06);border-top-color:var(--teal);border-radius:50%;animation:spin 1s linear infinite;}
-@keyframes spin{to{transform:rotate(360deg);}}
-.fp-loading-text{font-size:9px;color:var(--text-d);letter-spacing:1px;}
+.cat-pin svg{width:8px;height:8px;}
+.cat-pin-pulse{position:absolute;border-radius:50%;border:1px solid;top:-4px;left:-4px;width:28px;height:28px;animation:ping 2s infinite;opacity:0;}
+
+.slide-panel{width:0;background:rgba(3,10,14,0.98);border-left:1px solid var(--border);overflow:hidden;transition:width .28s cubic-bezier(.4,0,.2,1);display:flex;flex-direction:column;flex-shrink:0;z-index:500;}
+.slide-panel.open{width:240px;}
+.sp-head{padding:12px 13px;border-bottom:1px solid var(--border2);display:flex;align-items:center;gap:8px;flex-shrink:0;}
+.sp-head-icon svg{width:13px;height:13px;color:var(--teal);}
+.sp-head-title{font-size:8px;letter-spacing:2.5px;color:var(--teal);text-transform:uppercase;flex:1;white-space:nowrap;}
+.sp-head-count{font-family:var(--font-h);font-size:16px;font-weight:800;color:var(--text);line-height:1;}
+.sp-search{margin:9px 11px;background:rgba(255,255,255,0.03);border:1px solid var(--border2);border-radius:3px;padding:6px 9px;display:flex;align-items:center;gap:6px;flex-shrink:0;}
+.sp-search svg{width:10px;height:10px;color:var(--text-d);flex-shrink:0;}
+.sp-search input{background:transparent;border:none;outline:none;font-family:var(--font-m);font-size:9px;color:var(--text);width:100%;}
+.sp-search input::placeholder{color:var(--text-d);}
+.sp-filters{display:flex;gap:3px;padding:0 11px 8px;flex-shrink:0;}
+.sp-f{font-size:7px;letter-spacing:.8px;text-transform:uppercase;padding:3px 7px;border-radius:2px;border:1px solid var(--border2);color:var(--text-d);cursor:pointer;display:flex;align-items:center;gap:3px;transition:all .15s;font-family:var(--font-m);}
+.sp-f.on{border-color:rgba(0,212,170,0.35);color:var(--teal);background:rgba(0,212,170,0.06);}
+.sp-f-dot{width:3px;height:3px;border-radius:50%;flex-shrink:0;}
+.sp-list{overflow-y:auto;flex:1;}
+.sp-list::-webkit-scrollbar{width:2px;}
+.sp-list::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.05);}
+.sp-item{padding:8px 12px;border-bottom:1px solid rgba(255,255,255,0.03);display:flex;align-items:center;gap:8px;cursor:pointer;transition:all .12s;border-left:2px solid transparent;}
+.sp-item:hover{background:rgba(0,212,170,0.03);border-left-color:rgba(0,212,170,0.2);}
+.sp-item.active{background:rgba(0,212,170,0.05);border-left-color:var(--teal);}
+.sp-item-info{flex:1;min-width:0;}
+.sp-item-name{font-size:10px;color:#c8d0e0;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.sp-item-meta{font-size:8px;color:var(--text-d);display:flex;align-items:center;gap:4px;}
+.sp-item-meta svg{flex-shrink:0;width:7px;height:7px;}
+.sp-item-price{font-family:var(--font-h);font-size:10px;font-weight:800;flex-shrink:0;}
+.sp-item-badge{font-size:7px;letter-spacing:.8px;padding:1px 5px;border-radius:1px;border:1px solid;}
+.sp-legend{border-top:1px solid var(--border2);padding:7px 12px;display:flex;gap:12px;flex-shrink:0;}
+.sp-leg{display:flex;align-items:center;gap:4px;font-size:7px;color:var(--text-d);}
+.sp-leg-dot{width:4px;height:4px;border-radius:50%;flex-shrink:0;}
+.sp-empty{padding:20px;text-align:center;font-size:9px;color:var(--text-d);line-height:1.7;}
+.sp-loading{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;gap:8px;}
+.sp-spinner{width:20px;height:20px;border:1.5px solid rgba(255,255,255,0.05);border-top-color:var(--teal);border-radius:50%;animation:spin 1s linear infinite;}
+.sp-loading-text{font-size:8px;color:var(--text-d);letter-spacing:1px;}
+
+.icon-sidebar{width:44px;background:rgba(2,6,8,0.97);border-left:1px solid var(--border);display:flex;flex-direction:column;align-items:center;padding:10px 0;gap:4px;flex-shrink:0;z-index:600;}
+.si{width:30px;height:30px;border-radius:3px;border:1px solid transparent;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all .15s;}
+.si svg{width:13px;height:13px;color:var(--text-d);transition:color .15s;}
+.si:hover{border-color:var(--border2);}
+.si:hover svg{color:var(--text-m);}
+.si.on{border-color:rgba(0,212,170,0.3);background:rgba(0,212,170,0.07);}
+.si.on svg{color:var(--teal);}
+.si-sep{width:18px;height:1px;background:var(--border2);margin:3px 0;}
+.si-spacer{flex:1;}
+
+.ticker{height:36px;background:rgba(2,6,8,0.97);border-top:1px solid var(--border);display:flex;align-items:center;overflow:hidden;flex-shrink:0;position:relative;z-index:600;}
+.ticker-label{padding:0 14px;font-size:7px;letter-spacing:2.5px;color:var(--teal);text-transform:uppercase;white-space:nowrap;border-right:1px solid var(--border);height:100%;display:flex;align-items:center;gap:7px;flex-shrink:0;}
+.ticker-label-dot{width:5px;height:5px;border-radius:50%;background:var(--teal);animation:blink 1.3s infinite;}
+.ticker-track{display:flex;animation:ticker 35s linear infinite;white-space:nowrap;}
+.ticker-track:hover{animation-play-state:paused;}
+.ticker-item{display:flex;align-items:center;gap:8px;padding:0 20px;font-size:8px;color:var(--text-m);border-right:1px solid var(--border2);white-space:nowrap;}
+.ticker-item-dot{width:5px;height:5px;border-radius:50%;flex-shrink:0;}
+.ticker-name{color:var(--text);font-weight:500;}
+.ticker-stats{margin-left:auto;display:flex;align-items:center;border-left:1px solid var(--border);flex-shrink:0;}
+.ticker-stat{padding:0 14px;display:flex;align-items:center;gap:6px;border-right:1px solid var(--border);height:36px;}
+.ticker-stat:last-child{border-right:none;}
+.ticker-stat-val{font-family:var(--font-h);font-size:15px;font-weight:800;color:var(--text);line-height:1;}
+.ticker-stat-lbl{font-size:7px;letter-spacing:1.5px;color:var(--text-d);text-transform:uppercase;}
 </style>
 </head>
 <body>
+
 <nav class="nav">
-  <div class="n-pulse"></div>
-  <span class="n-title">Cat <em>Adoption</em> Radar</span>
+  <div class="n-logo-wrap">
+    <div class="n-logo-icon">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
+    </div>
+    <span class="n-title">Cat <em>Adoption</em> Radar</span>
+  </div>
   <div class="n-sep"></div>
+  <div class="n-live"><div class="n-live-dot"></div>Live feed</div>
   <div class="n-tabs">
     <div class="n-tab on" onclick="setTab(this)">Map</div>
     <div class="n-tab" onclick="setTab(this)">List</div>
@@ -142,90 +188,113 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-m);display:fl
       <div class="n-stat"><div class="n-lbl">Free</div><div class="n-val b" id="stat-free">—</div></div>
     </div>
     <div class="n-sep"></div>
-    <a class="n-cta" href="https://televet.pk" target="_blank">Book Vet →</a>
+    <a class="n-cta" href="https://televet.pk" target="_blank">Book Vet <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg></a>
   </div>
 </nav>
-<div class="map-wrap">
-  <div id="map"></div>
-  
-  <div class="float-panel" id="fp">
-    <div class="fp-head">
-      <div class="fp-head-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M3 9h18M9 21V9"/></svg></div>
-      <div class="fp-head-title">Listings</div>
-      <div class="fp-collapse" onclick="togglePanel()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg></div>
+
+<div class="body-wrap">
+  <div class="map-wrap">
+    <div id="map"></div>
+    <div class="map-scanlines"></div>
+    <div class="city-hud" id="city-hud"></div>
+    <div class="map-hud-tr">
+      <div class="hud-pill"><div class="hud-dot" style="background:var(--teal);animation:blink 1.3s infinite"></div>Updated <span id="hud-time">—</span></div>
+      <div class="hud-pill"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>Pakistan only</div>
     </div>
-    <div class="fp-search">
+    <div class="zoom-ctrl">
+      <div class="zoom-btn" onclick="map.zoomIn()">+</div>
+      <div class="zoom-btn" onclick="map.zoomOut()">−</div>
+    </div>
+  </div>
+
+  <div class="slide-panel open" id="sp">
+    <div class="sp-head">
+      <div class="sp-head-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M3 9h18M9 21V9"/></svg></div>
+      <div class="sp-head-title">Listings</div>
+      <div class="sp-head-count" id="sp-count">—</div>
+    </div>
+    <div class="sp-search">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
       <input id="search-input" placeholder="Search breed, city..." oninput="onSearch(this.value)">
     </div>
-    <div class="fp-filters">
-      <div class="fp-f on" onclick="setFilter('all',this)"><div class="fp-f-dot" style="background:var(--teal)"></div>All</div>
-      <div class="fp-f" onclick="setFilter('urgent',this)"><div class="fp-f-dot" style="background:var(--red)"></div>Urgent</div>
-      <div class="fp-f" onclick="setFilter('free',this)"><div class="fp-f-dot" style="background:var(--blue)"></div>Free</div>
-      <div class="fp-f" onclick="setFilter('sale',this)"><div class="fp-f-dot" style="background:var(--text-d)"></div>Sale</div>
+    <div class="sp-filters">
+      <div class="sp-f on" onclick="setFilter('all',this)"><div class="sp-f-dot" style="background:var(--teal)"></div>All</div>
+      <div class="sp-f" onclick="setFilter('urgent',this)"><div class="sp-f-dot" style="background:var(--red)"></div>Urgent</div>
+      <div class="sp-f" onclick="setFilter('free',this)"><div class="sp-f-dot" style="background:var(--blue)"></div>Free</div>
+      <div class="sp-f" onclick="setFilter('sale',this)"><div class="sp-f-dot" style="background:var(--text-d)"></div>Sale</div>
     </div>
-    <div class="fp-list" id="fp-list">
-      <div class="fp-loading"><div class="fp-spinner"></div><div class="fp-loading-text">Loading listings...</div></div>
+    <div class="sp-list" id="sp-list">
+      <div class="sp-loading"><div class="sp-spinner"></div><div class="sp-loading-text">Scanning OLX...</div></div>
     </div>
-    <div class="fp-legend">
-      <div class="fp-leg-item"><div class="fp-leg-dot" style="background:var(--teal)"></div>Available</div>
-      <div class="fp-leg-item"><div class="fp-leg-dot" style="background:var(--red)"></div>Urgent</div>
-      <div class="fp-leg-item"><div class="fp-leg-dot" style="background:var(--blue)"></div>Free</div>
-    </div>
-  </div>
-  <div class="map-hud">
-    <div class="hud-row"><div class="hud-dot" style="background:var(--teal);animation:np 1.4s infinite"></div>Live · <span id="hud-time">—</span></div>
-    <div class="hud-row"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>Pakistan only</div>
-  </div>
-  <div class="stats-strip">
-    <div class="ss-pill">
-      <div class="ss-item"><div class="ss-lbl">Listings</div><div class="ss-val" style="color:var(--teal)" id="ss-total">—</div></div>
-      <div class="ss-divider"></div>
-      <div class="ss-item"><div class="ss-lbl">Cities</div><div class="ss-val" style="color:var(--text)" id="ss-cities">—</div></div>
-      <div class="ss-divider"></div>
-      <div class="ss-item"><div class="ss-lbl">Urgent</div><div class="ss-val" style="color:var(--red)" id="ss-urgent">—</div></div>
-      <div class="ss-divider"></div>
-      <div class="ss-item"><div class="ss-lbl">Free</div><div class="ss-val" style="color:var(--blue)" id="ss-free">—</div></div>
+    <div class="sp-legend">
+      <div class="sp-leg"><div class="sp-leg-dot" style="background:var(--teal)"></div>Available</div>
+      <div class="sp-leg"><div class="sp-leg-dot" style="background:var(--red)"></div>Urgent</div>
+      <div class="sp-leg"><div class="sp-leg-dot" style="background:var(--blue)"></div>Free</div>
     </div>
   </div>
-  <div class="zoom-ctrl">
-    <div class="zoom-btn" onclick="map.zoomIn()">+</div>
-    <div class="zoom-btn" onclick="map.zoomOut()">−</div>
+
+  <div class="icon-sidebar">
+    <div class="si on" id="si-list" onclick="togglePanel()" title="Listings">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M3 9h18M9 21V9"/></svg>
+    </div>
+    <div class="si-sep"></div>
+    <div class="si" title="Analytics" onclick="alert('Analytics coming soon!')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+    </div>
+    <div class="si-spacer"></div>
+    <div class="si" onclick="window.open('https://televet.pk','_blank')" title="televet.pk">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+    </div>
   </div>
 </div>
+
+<div class="ticker">
+  <div class="ticker-label"><div class="ticker-label-dot"></div>Live listings</div>
+  <div style="flex:1;overflow:hidden;position:relative;">
+    <div class="ticker-track" id="ticker-track">
+      <div class="ticker-item" style="color:var(--text-d);font-size:8px;letter-spacing:1px;">Loading...</div>
+    </div>
+  </div>
+  <div class="ticker-stats">
+    <div class="ticker-stat"><div class="ticker-stat-val" id="ts-total" style="color:var(--teal)">—</div><div class="ticker-stat-lbl">Listings</div></div>
+    <div class="ticker-stat"><div class="ticker-stat-val" id="ts-cities">—</div><div class="ticker-stat-lbl">Cities</div></div>
+    <div class="ticker-stat"><div class="ticker-stat-val" id="ts-urgent" style="color:var(--red)">—</div><div class="ticker-stat-lbl">Urgent</div></div>
+    <div class="ticker-stat"><div class="ticker-stat-val" id="ts-free" style="color:var(--blue)">—</div><div class="ticker-stat-lbl">Free</div></div>
+  </div>
+</div>
+
 <script>
 const CSV="https://docs.google.com/spreadsheets/d/e/2PACX-1vQ1WTdQBtcK-HGJ0lhOpwTz47nLAqS_8S09JBeAAe7OoY60BbTZWxd1jZyrnz4PYZMoVnCZh6l81ZtE/pub?gid=0&single=true&output=csv";
-let allCats=[],markers=[],map=null,activeFilter="all",searchTerm="",activeCard=null,lastLoaded=null;
-const COORDS={"Karachi":[24.8607,67.0011],"Lahore":[31.5204,74.3587],"Islamabad":[33.6844,73.0479],"Rawalpindi":[33.6007,73.0679],"Faisalabad":[31.4504,73.1350],"Multan":[30.1575,71.5249],"Peshawar":[34.0151,71.5249],"Quetta":[30.1798,66.9750],"Sialkot":[32.4945,74.5229],"Gujranwala":[32.1877,74.1945],"Sargodha":[32.0836,72.6711],"Sahiwal":[30.6682,73.1066],"Wah":[33.7667,72.7167],"Sheikhupura":[31.7167,73.9833],"Bahawalpur":[29.3956,71.6836],"Layyah":[30.9598,70.9389]};
+let allCats=[],markers=[],map=null,activeFilter="all",searchTerm="",activeCard=null,lastLoaded=null,panelOpen=true;
+const COORDS={"Karachi":[24.8607,67.0011],"Lahore":[31.5204,74.3587],"Islamabad":[33.6844,73.0479],"Rawalpindi":[33.6007,73.0679],"Faisalabad":[31.4504,73.135],"Multan":[30.1575,71.5249],"Peshawar":[34.0151,71.5249],"Quetta":[30.1798,66.975],"Sialkot":[32.4945,74.5229],"Gujranwala":[32.1877,74.1945],"Sargodha":[32.0836,72.6711],"Sahiwal":[30.6682,73.1066],"Wah":[33.7667,72.7167],"Sheikhupura":[31.7167,73.9833],"Bahawalpur":[29.3956,71.6836],"Layyah":[30.9598,70.9389]};
+const CODES={"Karachi":"KHI","Lahore":"LHR","Islamabad":"ISB","Rawalpindi":"RWP","Faisalabad":"FSD","Multan":"MUX","Peshawar":"PEW","Quetta":"UET","Sialkot":"SKT","Gujranwala":"GUJ","Sargodha":"SGD","Sahiwal":"SWL","Wah":"WAH","Sheikhupura":"SKP","Bahawalpur":"BWP","Layyah":"LYY"};
+
 function initMap(){
   map=L.map('map',{center:[30.3753,69.3451],zoom:6,zoomControl:false,minZoom:5,maxZoom:15,maxBounds:[[23,60],[37,78]],maxBoundsViscosity:1.0});
   L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',{attribution:'',maxZoom:18,subdomains:'abcd'}).addTo(map);
 }
+
 async function loadData(){
-  showLoading();
   try{
     const r=await fetch(CSV);
     if(!r.ok) throw new Error("HTTP "+r.status);
     const t=await r.text();
     allCats=parseCSV(t);
     lastLoaded=new Date();
-    renderAll();
-    updateStats();
-    updateHudTime();
+    renderAll();updateStats();updateHud();buildCityHud();buildTicker();
   }catch(e){
     console.error(e);
-    showEmpty("Could not load listings.<br>Check sheet is published as CSV.");
+    document.getElementById('sp-list').innerHTML='<div class="sp-empty">Could not load listings.</div>';
   }
 }
+
 function parseCSV(text){
   text=text.replace(/^\uFEFF/,'');
   const lines=text.split('\n').map(l=>l.trim()).filter(l=>l);
   if(lines.length<2) return [];
-  const headers=splitLine(lines[0]);
-  const cats=[];
+  const headers=splitLine(lines[0]);const cats=[];
   for(let i=1;i<lines.length;i++){
-    const vals=splitLine(lines[i]);
-    const row={};
+    const vals=splitLine(lines[i]);const row={};
     headers.forEach((h,idx)=>{row[h.trim()]=(vals[idx]||'').trim();});
     const urgency=(row["Urgency"]||"normal").toLowerCase();
     const type=(row["Listing Type"]||"sale").toLowerCase();
@@ -233,19 +302,24 @@ function parseCSV(text){
     let status="available";
     if(urgency==="urgent") status="urgent";
     else if(type==="free"||price.toLowerCase()==="free"||type==="adoption") status="free";
-    cats.push({name:row["Cat Name"]||"Unknown",breed:row["Breed"]||"Not specified",age:row["Age"]||"",gender:row["Gender"]||"",color:row["Color"]||"",price,city:row["City"]||"",hood:row["Neighbourhood"]||"",health:row["Health Status"]||"",urgency,type,contact:row["Contact Info"]||"",desc:row["Description"]||"",source:row["Source"]||"OLX",scraped:row["Scraped At"]||"",url:row["Original URL"]||"",status,coords:getCityCoords(row["City"]||"")});
+    cats.push({name:row["Cat Name"]||"Unknown",breed:row["Breed"]||"Not specified",age:row["Age"]||"",gender:row["Gender"]||"",price,city:row["City"]||"",hood:row["Neighbourhood"]||"",health:row["Health Status"]||"",urgency,type,contact:row["Contact Info"]||"",url:row["Original URL"]||"",status,coords:getCityCoords(row["City"]||"")});
   }
   return cats;
 }
+
 function splitLine(line){
   const res=[];let cur="";let q=false;
   for(let i=0;i<line.length;i++){const c=line[i];if(c==='"'){q=!q;}else if(c===','&&!q){res.push(cur);cur="";}else{cur+=c;}}
   res.push(cur);return res;
 }
+
 function getCityCoords(city){
-  for(const[name,coords]of Object.entries(COORDS)){if(city&&city.includes(name)){return[coords[0]+(Math.random()-0.5)*0.09,coords[1]+(Math.random()-0.5)*0.09];}}
-  return[30.3753+(Math.random()-0.5)*6,69.3451+(Math.random()-0.5)*6];
+  for(const[name,coords]of Object.entries(COORDS)){
+    if(city&&city.includes(name)) return[coords[0]+(Math.random()-.5)*.08,coords[1]+(Math.random()-.5)*.08];
+  }
+  return[30.3753+(Math.random()-.5)*6,69.3451+(Math.random()-.5)*6];
 }
+
 function getFiltered(){
   return allCats.filter(cat=>{
     const mf=activeFilter==="all"||(activeFilter==="urgent"&&cat.status==="urgent")||(activeFilter==="free"&&cat.status==="free")||(activeFilter==="sale"&&cat.status==="available");
@@ -254,49 +328,107 @@ function getFiltered(){
     return mf&&ms;
   });
 }
+
 function renderAll(){renderList();renderPins();}
+
 function renderList(){
-  const cats=getFiltered();const el=document.getElementById('fp-list');
-  if(!cats.length){el.innerHTML='<div class="fp-empty">No listings match this filter</div>';return;}
+  const cats=getFiltered();const el=document.getElementById('sp-list');
+  document.getElementById('sp-count').textContent=cats.length||'—';
+  if(!cats.length){el.innerHTML='<div class="sp-empty">No listings match</div>';return;}
   el.innerHTML=cats.map((cat,i)=>{
     const lc=cat.status==='urgent'?'var(--red)':cat.status==='free'?'var(--blue)':'var(--teal)';
     const pc=cat.status==='urgent'?'var(--red)':cat.status==='free'?'var(--blue)':'var(--teal)';
-    const pl=cat.status==='urgent'?`<span class="fp-item-badge" style="border-color:rgba(255,77,109,0.4);color:var(--red);background:rgba(255,77,109,0.08)">Urgent</span>`:`<span style="color:${pc}">${esc(cat.price)}</span>`;
-    return`<div class="fp-item" id="card-${i}" onclick="focusCat(${i})"><div class="fp-item-line" style="background:${lc}"></div><div class="fp-item-info"><div class="fp-item-name">${esc(cat.name)}${cat.breed&&cat.breed!=='Not specified'?' · '+esc(cat.breed):''}</div><div class="fp-item-meta"><svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>${esc(cat.city)}${cat.hood&&cat.hood!=='Not specified'?', '+esc(cat.hood):''}</div></div><div class="fp-item-price">${pl}</div></div>`;
+    const pl=cat.status==='urgent'?`<span class="sp-item-badge" style="border-color:rgba(255,77,109,0.4);color:var(--red);background:rgba(255,77,109,0.07)">Urgent</span>`:`<span style="color:${pc}">${esc(cat.price)}</span>`;
+    return`<div class="sp-item" id="card-${i}" onclick="focusCat(${i})" style="border-left-color:${lc}"><div class="sp-item-info"><div class="sp-item-name">${esc(cat.name)}${cat.breed&&cat.breed!=='Not specified'?' · '+esc(cat.breed):''}</div><div class="sp-item-meta"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>${esc(cat.city)}${cat.hood&&cat.hood!=='Not specified'?', '+esc(cat.hood):''}</div></div><div class="sp-item-price">${pl}</div></div>`;
   }).join('');
 }
+
 function renderPins(){
   markers.forEach(m=>map.removeLayer(m));markers=[];
   getFiltered().forEach((cat,i)=>{
     if(!cat.coords) return;
     const cls=cat.status==='urgent'?'urgent':cat.status==='free'?'free':'available';
     const clr=cat.status==='urgent'?'#ff4d6d':cat.status==='free'?'#4f8ef7':'#00d4aa';
-    const icon=L.divIcon({className:'',html:`<div class="cat-pin ${cls}"><svg viewBox="0 0 24 24" fill="none" stroke="${clr}" stroke-width="2.5"><circle cx="12" cy="12" r="5"/></svg></div>`,iconSize:[22,22],iconAnchor:[11,11]});
-    const marker=L.marker(cat.coords,{icon}).addTo(map).bindPopup(makePopup(cat),{maxWidth:260,closeButton:true});
+    const pulse=cat.status==='urgent'?`<div class="cat-pin-pulse" style="border-color:${clr}"></div>`:'';
+    const icon=L.divIcon({className:'',html:`<div class="cat-pin ${cls}">${pulse}<svg viewBox="0 0 24 24" fill="none" stroke="${clr}" stroke-width="2.5"><circle cx="12" cy="12" r="4"/></svg></div>`,iconSize:[20,20],iconAnchor:[10,10]});
+    const marker=L.marker(cat.coords,{icon}).addTo(map).bindPopup(makePopup(cat),{maxWidth:250,closeButton:true});
     marker.on('click',()=>highlightCard(i));markers.push(marker);
   });
 }
+
 function makePopup(cat){
   const pc=cat.status==='urgent'?'var(--red)':cat.status==='free'?'var(--blue)':'var(--teal)';
-  return`<div class="pu"><div class="pu-name">${esc(cat.name)}</div><div class="pu-breed">${esc(cat.breed)}${cat.age?' · '+esc(cat.age):''}${cat.gender&&cat.gender!=='Unknown'?' · '+esc(cat.gender):''}</div>${cat.city?`<div class="pu-row"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>${esc(cat.city)}${cat.hood&&cat.hood!=='Not specified'?', '+esc(cat.hood):''}</div>`:''}${cat.health&&cat.health!=='Not mentioned'?`<div class="pu-row"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>${esc(cat.health)}</div>`:''}${cat.contact&&cat.contact!=='See link'?`<div class="pu-row"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013 4.18 2 2 0 014.18 2h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/></svg>${esc(cat.contact)}</div>`:''}<div class="pu-price" style="color:${pc}">${esc(cat.price)}</div><div class="pu-btns"><a class="pu-btn pu-btn-primary" href="https://televet.pk" target="_blank">Book Vet →</a>${cat.url?`<a class="pu-btn pu-btn-ghost" href="${esc(cat.url)}" target="_blank">OLX listing</a>`:''}</div></div>`;
+  return`<div class="pu"><div class="pu-name">${esc(cat.name)}</div><div class="pu-breed">${esc(cat.breed)}${cat.age?' · '+esc(cat.age):''}${cat.gender&&cat.gender!=='Unknown'?' · '+esc(cat.gender):''}</div>${cat.city?`<div class="pu-row"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>${esc(cat.city)}${cat.hood&&cat.hood!=='Not specified'?', '+esc(cat.hood):''}</div>`:''}${cat.health&&cat.health!=='Not mentioned'?`<div class="pu-row"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>${esc(cat.health)}</div>`:''}${cat.contact&&cat.contact!=='See link'?`<div class="pu-row"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013 4.18 2 2 0 014.18 2h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/></svg>${esc(cat.contact)}</div>`:''}<div class="pu-price" style="color:${pc}">${esc(cat.price)}</div><div class="pu-btns"><a class="pu-btn pu-btn-primary" href="https://televet.pk" target="_blank">Book Vet →</a>${cat.url?`<a class="pu-btn pu-btn-ghost" href="${esc(cat.url)}" target="_blank">View OLX</a>`:''}</div></div>`;
 }
-function focusCat(i){const cat=getFiltered()[i];if(!cat?.coords) return;highlightCard(i);map.flyTo(cat.coords,12,{duration:1.0});if(markers[i]) markers[i].openPopup();}
-function highlightCard(i){if(activeCard!==null) document.getElementById(`card-${activeCard}`)?.classList.remove('active');activeCard=i;const el=document.getElementById(`card-${i}`);if(el){el.classList.add('active');el.scrollIntoView({behavior:'smooth',block:'nearest'});}}
-function setFilter(f,btn){activeFilter=f;document.querySelectorAll('.fp-f').forEach(b=>b.classList.remove('on'));btn.classList.add('on');activeCard=null;renderAll();}
+
+function buildCityHud(){
+  const counts={};
+  allCats.forEach(c=>{
+    for(const name of Object.keys(COORDS)){
+      if(c.city&&c.city.includes(name)){
+        if(!counts[name]) counts[name]={total:0,urgent:0};
+        counts[name].total++;if(c.status==='urgent') counts[name].urgent++;break;
+      }
+    }
+  });
+  const sorted=Object.entries(counts).sort((a,b)=>b[1].total-a[1].total).slice(0,5);
+  const max=sorted[0]?.[1]?.total||1;
+  document.getElementById('city-hud').innerHTML=sorted.map(([name,d])=>`<div class="ch-row"><div class="ch-code">${CODES[name]||name.slice(0,3).toUpperCase()}</div><div class="ch-name">${name}</div><div class="ch-bar-wrap"><div class="ch-bar" style="width:${Math.round(d.total/max*100)}%"></div></div><div class="ch-count">${d.total}</div>${d.urgent?`<div class="ch-urgent">${d.urgent}!</div>`:''}</div>`).join('');
+}
+
+function buildTicker(){
+  if(!allCats.length) return;
+  const items=allCats.map(cat=>{
+    const clr=cat.status==='urgent'?'#ff4d6d':cat.status==='free'?'#4f8ef7':'#00d4aa';
+    const price=cat.status==='urgent'?'URGENT':cat.status==='free'?'FREE':esc(cat.price);
+    return`<div class="ticker-item"><div class="ticker-item-dot" style="background:${clr}"></div><span class="ticker-name">${esc(cat.name)}</span>${cat.breed&&cat.breed!=='Not specified'?`<span style="color:var(--text-d)">·</span><span>${esc(cat.breed)}</span>`:''}<span style="color:var(--text-d)">·</span><span style="color:var(--text-d)">${esc(cat.city)}</span><span style="color:var(--text-d)">·</span><span style="color:${clr}">${price}</span></div>`;
+  }).join('');
+  const track=document.getElementById('ticker-track');
+  track.innerHTML=items+items;
+}
+
+function focusCat(i){
+  const cat=getFiltered()[i];if(!cat?.coords) return;
+  highlightCard(i);map.flyTo(cat.coords,12,{duration:.9});
+  if(markers[i]) markers[i].openPopup();
+}
+
+function highlightCard(i){
+  if(activeCard!==null) document.getElementById(`card-${activeCard}`)?.classList.remove('active');
+  activeCard=i;const el=document.getElementById(`card-${i}`);
+  if(el){el.classList.add('active');el.scrollIntoView({behavior:'smooth',block:'nearest'});}
+}
+
+function togglePanel(){
+  const sp=document.getElementById('sp');const si=document.getElementById('si-list');
+  panelOpen=!panelOpen;
+  sp.classList.toggle('open',panelOpen);
+  si.classList.toggle('on',panelOpen);
+  setTimeout(()=>map.invalidateSize(),300);
+}
+
+function setFilter(f,btn){activeFilter=f;document.querySelectorAll('.sp-f').forEach(b=>b.classList.remove('on'));btn.classList.add('on');activeCard=null;renderAll();}
 function onSearch(val){searchTerm=val;activeCard=null;renderAll();}
 function setTab(btn){document.querySelectorAll('.n-tab').forEach(b=>b.classList.remove('on'));btn.classList.add('on');}
-function togglePanel(){document.getElementById('fp').classList.toggle('collapsed');setTimeout(()=>map.invalidateSize(),320);}
+
 function updateStats(){
   const total=allCats.length,cities=new Set(allCats.map(c=>c.city).filter(Boolean)).size,urgent=allCats.filter(c=>c.status==='urgent').length,free=allCats.filter(c=>c.status==='free').length;
-  ['total','cities','urgent','free'].forEach(k=>{const v=k==='total'?total:k==='cities'?cities:k==='urgent'?urgent:free;document.getElementById('stat-'+k).textContent=v||'—';document.getElementById('ss-'+k).textContent=v||'—';});
+  ['total','cities','urgent','free'].forEach(k=>{
+    const v=k==='total'?total:k==='cities'?cities:k==='urgent'?urgent:free;
+    document.getElementById('stat-'+k).textContent=v||'—';
+    document.getElementById('ts-'+k).textContent=v||'—';
+  });
 }
-function updateHudTime(){if(!lastLoaded) return;const diff=Math.floor((Date.now()-lastLoaded)/60000);document.getElementById('hud-time').textContent=diff<1?'just now':diff<60?diff+'m ago':Math.floor(diff/60)+'h ago';}
-function showLoading(){document.getElementById('fp-list').innerHTML='<div class="fp-loading"><div class="fp-spinner"></div><div class="fp-loading-text">Loading listings...</div></div>';}
-function showEmpty(msg){document.getElementById('fp-list').innerHTML=`<div class="fp-empty">${msg}</div>`;}
-function esc(s){if(!s)return'';return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
-initMap();
-loadData();
-setInterval(updateHudTime,60000);
+
+function updateHud(){
+  if(!lastLoaded) return;
+  const diff=Math.floor((Date.now()-lastLoaded)/60000);
+  document.getElementById('hud-time').textContent=diff<1?'just now':diff<60?diff+'m ago':Math.floor(diff/60)+'h ago';
+}
+
+function esc(s){if(!s) return'';return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+
+initMap();loadData();setInterval(updateHud,60000);
 </script>
 </body>
 </html>
