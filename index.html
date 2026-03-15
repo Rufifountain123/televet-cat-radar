@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="en-PK">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cat Adoption Radar — Pakistan</title>
+<meta name="description" content="Find cats available for adoption across Pakistan. Live listings scraped automatically.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<style>
+:root {
+  --bg:#04080f;--bg2:#020508;--teal:#00d4aa;--blue:#4f8ef7;--red:#ff4d6d;
+  --text:#e8eaf0;--text-m:#9aa5b8;--text-d:#4a5568;
+  --border:rgba(255,255,255,0.07);--border-teal:rgba(0,212,170,0.15);
+  --font-h:'Syne',sans-serif;--font-m:'DM Mono',monospace;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html,body{height:100%;overflow:hidden;}
+body{background:var(--bg);color:var(--text);font-family:var(--font-m);display:flex;flex-direction:column;}
+.nav{height:46px;background:var(--bg2);border-bottom:1px solid var(--border-teal);display:flex;align-items:center;padding:0 18px;gap:16px;position:relative;z-index:1000;flex-shrink:0;}
+.n-pulse{width:6px;height:6px;border-radius:50%;background:var(--teal);animation:np 1.4s infinite;flex-shrink:0;}
+@keyframes np{0%,100%{opacity:1}50%{opacity:0.2}}
+.n-title{font-family:var(--font-h);font-size:18px;font-weight:800;color:var(--text);letter-spacing:-0.5px;white-space:nowrap;}
+.n-title em{color:var(--teal);font-style:normal;}
+.n-sep{width:1px;height:20px;background:rgba(255,255,255,0.06);flex-shrink:0;}
+.n-tabs{display:flex;gap:2px;}
+.n-tab{font-family:var(--font-m);font-size:9px;letter-spacing:1.5px;text-transform:uppercase;padding:5px 12px;border-radius:3px;color:var(--text-d);cursor:pointer;border:1px solid transparent;transition:all .2s;}
+.n-tab.on{color:var(--teal);border-color:rgba(0,212,170,0.2);background:rgba(0,212,170,0.06);}
+.n-tab:hover:not(.on){color:var(--text-m);border-color:var(--border);}
+.n-right{margin-left:auto;display:flex;align-items:center;gap:16px;}
+.n-stats{display:flex;gap:20px;}
+.n-stat{display:flex;flex-direction:column;gap:1px;align-items:flex-end;}
+.n-lbl{font-size:8px;letter-spacing:1.5px;color:var(--text-d);text-transform:uppercase;}
+.n-val{font-family:var(--font-h);font-size:13px;font-weight:800;line-height:1;color:var(--text);}
+.n-val.t{color:var(--teal);}.n-val.r{color:var(--red);}.n-val.b{color:var(--blue);}
+.n-cta{font-family:var(--font-m);font-size:9px;letter-spacing:1.5px;text-transform:uppercase;background:transparent;color:var(--teal);padding:7px 14px;border-radius:4px;font-weight:500;border:1px solid rgba(0,212,170,0.4);cursor:pointer;text-decoration:none;display:flex;align-items:center;transition:all .2s;white-space:nowrap;}
+.n-cta:hover{background:rgba(0,212,170,0.08);}
+.map-wrap{flex:1;position:relative;overflow:hidden;}
+#map{width:100%;height:100%;}
+.leaflet-tile-pane{filter:brightness(0.9) saturate(0.7) hue-rotate(185deg);}
+.leaflet-control-attribution{display:none !important;}
+.leaflet-control-zoom{display:none !important;}
+.map-grid{position:absolute;inset:0;pointer-events:none;z-index:200;background-image:linear-gradient(rgba(0,212,170,0.04) 1px,transparent 1px),linear-gradient(90deg,rgba(0,212,170,0.04) 1px,transparent 1px);background-size:36px 36px;mask-image:radial-gradient(ellipse 75% 70% at 55% 50%,black 20%,transparent 100%);-webkit-mask-image:radial-gradient(ellipse 75% 70% at 55% 50%,black 20%,transparent 100%);}
+.float-panel{position:absolute;top:14px;left:14px;z-index:500;width:240px;background:rgba(2,5,8,0.97);border:1px solid var(--border-teal);border-radius:8px;overflow:hidden;transition:width .3s ease;}
+.float-panel.collapsed{width:40px;}
+.fp-head{padding:11px 13px;border-bottom:1px solid rgba(255,255,255,0.05);display:flex;align-items:center;gap:8px;}
+.fp-head-icon{flex-shrink:0;display:flex;}
+.fp-head-icon svg{width:15px;height:15px;color:var(--teal);}
+.fp-head-title{font-size:9px;letter-spacing:2.5px;color:var(--teal);text-transform:uppercase;flex:1;white-space:nowrap;overflow:hidden;}
+.fp-collapse{width:18px;height:18px;border-radius:3px;border:1px solid rgba(255,255,255,0.08);display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;transition:background .15s;}
+.fp-collapse:hover{background:rgba(255,255,255,0.05);}
+.fp-collapse svg{width:10px;height:10px;color:var(--text-d);transition:transform .3s;}
+.float-panel.collapsed .fp-collapse svg{transform:rotate(180deg);}
+.fp-search{margin:9px 12px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);border-radius:4px;padding:6px 10px;display:flex;align-items:center;gap:7px;}
+.fp-search svg{width:11px;height:11px;color:var(--text-d);flex-shrink:0;}
+.fp-search input{background:transparent;border:none;outline:none;font-family:var(--font-m);font-size:10px;color:var(--text);width:100%;}
+.fp-search input::placeholder{color:var(--text-d);}
+.fp-filters{display:flex;gap:4px;padding:0 12px 9px;}
+.fp-f{font-size:8px;letter-spacing:1px;text-transform:uppercase;padding:3px 8px;border-radius:2px;border:1px solid rgba(255,255,255,0.07);color:var(--text-d);cursor:pointer;display:flex;align-items:center;gap:4px;transition:all .15s;font-family:var(--font-m);}
+.fp-f:hover{color:var(--text-m);border-color:rgba(255,255,255,0.12);}
+.fp-f.on{border-color:rgba(0,212,170,0.35);color:var(--teal);background:rgba(0,212,170,0.06);}
+.fp-f-dot{width:4px;height:4px;border-radius:50%;flex-shrink:0;}
+.fp-list{overflow-y:auto;max-height:260px;}
+.fp-list::-webkit-scrollbar{width:3px;}
+.fp-list::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.06);border-radius:2px;}
+.fp-item{padding:9px 13px;border-bottom:1px solid rgba(255,255,255,0.04);display:flex;align-items:center;gap:9px;cursor:pointer;transition:background .15s;}
+.fp-item:hover{background:rgba(0,212,170,0.04);}
+.fp-item.active{background:rgba(0,212,170,0.06);}
+.fp-item-line{width:2px;height:30px;border-radius:1px;flex-shrink:0;}
+.fp-item-info{flex:1;min-width:0;}
+.fp-item-name{font-size:11px;color:#c8d0e0;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.fp-item-meta{font-size:9px;color:var(--text-d);display:flex;align-items:center;gap:4px;}
+.fp-item-meta svg{flex-shrink:0;}
+.fp-item-price{font-family:var(--font-h);font-size:11px;font-weight:800;flex-shrink:0;}
+.fp-item-badge{font-size:7px;letter-spacing:1px;padding:2px 5px;border-radius:2px;border:1px solid;}
+.fp-empty{padding:24px 16px;text-align:center;font-size:10px;color:var(--text-d);letter-spacing:0.5px;line-height:1.7;}
+.fp-legend{border-top:1px solid rgba(255,255,255,0.05);padding:8px 13px;display:flex;gap:14px;}
+.fp-leg-item{display:flex;align-items:center;gap:5px;font-size:8px;color:var(--text-d);letter-spacing:0.5px;}
+.fp-leg-dot{width:5px;height:5px;border-radius:50%;flex-shrink:0;}
+.float-panel.collapsed .fp-search,.float-panel.collapsed .fp-filters,.float-panel.collapsed .fp-list,.float-panel.collapsed .fp-legend,.float-panel.collapsed .fp-head-title{display:none;}
+.stats-strip{position:absolute;bottom:14px;left:50%;transform:translateX(-50%);z-index:500;}
+.ss-pill{background:rgba(2,5,8,0.97);border:1px solid rgba(255,255,255,0.07);border-radius:100px;padding:8px 22px;display:flex;align-items:center;gap:16px;white-space:nowrap;}
+.ss-item{display:flex;flex-direction:column;align-items:center;gap:2px;}
+.ss-lbl{font-size:8px;letter-spacing:1.5px;color:var(--text-d);text-transform:uppercase;}
+.ss-val{font-family:var(--font-h);font-size:15px;font-weight:800;line-height:1;}
+.ss-divider{width:1px;height:26px;background:rgba(255,255,255,0.06);}
+.map-hud{position:absolute;top:14px;right:14px;display:flex;flex-direction:column;gap:5px;z-index:500;align-items:flex-end;}
+.hud-row{background:rgba(2,5,8,0.95);border:1px solid rgba(255,255,255,0.07);border-radius:100px;padding:5px 12px;display:flex;align-items:center;gap:7px;font-size:9px;color:var(--text-d);letter-spacing:1px;}
+.hud-row span{color:var(--text-m);}
+.hud-dot{width:5px;height:5px;border-radius:50%;flex-shrink:0;}
+.zoom-ctrl{position:absolute;bottom:14px;right:14px;display:flex;flex-direction:column;gap:2px;z-index:500;}
+.zoom-btn{width:28px;height:28px;background:rgba(2,5,8,0.95);border:1px solid rgba(255,255,255,0.08);border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:16px;color:var(--text-d);cursor:pointer;font-family:monospace;line-height:1;transition:all .15s;user-select:none;}
+.zoom-btn:hover{color:var(--text-m);border-color:rgba(255,255,255,0.15);}
+.leaflet-popup-content-wrapper{background:rgba(2,5,8,0.98) !important;border:1px solid var(--border-teal) !important;border-radius:8px !important;box-shadow:0 20px 60px rgba(0,0,0,0.7) !important;padding:0 !important;}
+.leaflet-popup-content{margin:0 !important;width:240px !important;}
+.leaflet-popup-tip-container{display:none !important;}
+.leaflet-popup-close-button{color:var(--text-d) !important;font-size:16px !important;top:10px !important;right:12px !important;z-index:10;}
+.leaflet-popup-close-button:hover{color:var(--text) !important;}
+.pu{padding:16px;}
+.pu-name{font-family:var(--font-h);font-size:14px;font-weight:800;color:var(--text);margin-bottom:2px;}
+.pu-breed{font-size:10px;color:var(--text-d);margin-bottom:10px;letter-spacing:0.5px;}
+.pu-row{display:flex;align-items:center;gap:6px;font-size:10px;color:var(--text-m);margin-bottom:5px;}
+.pu-row svg{flex-shrink:0;}
+.pu-price{font-family:var(--font-h);font-size:15px;font-weight:800;margin:10px 0 12px;}
+.pu-btns{display:flex;gap:8px;}
+.pu-btn{flex:1;padding:8px;border-radius:4px;font-family:var(--font-m);font-size:9px;font-weight:500;letter-spacing:1px;text-transform:uppercase;text-align:center;text-decoration:none;cursor:pointer;border:none;transition:all .2s;}
+.pu-btn-primary{background:var(--teal);color:var(--bg2);}
+.pu-btn-primary:hover{opacity:.85;}
+.pu-btn-ghost{background:transparent;color:var(--text-m);border:1px solid rgba(255,255,255,0.1);}
+.pu-btn-ghost:hover{border-color:var(--border-teal);color:var(--teal);}
+.cat-pin{width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;border:1.5px solid;cursor:pointer;transition:transform .15s;}
+.cat-pin:hover{transform:scale(1.25);}
+.cat-pin.available{background:rgba(0,212,170,0.15);border-color:var(--teal);}
+.cat-pin.urgent{background:rgba(255,77,109,0.15);border-color:var(--red);}
+.cat-pin.free{background:rgba(79,142,247,0.15);border-color:var(--blue);}
+.cat-pin svg{width:10px;height:10px;}
+.fp-loading{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:28px 16px;gap:10px;}
+.fp-spinner{width:24px;height:24px;border:2px solid rgba(255,255,255,0.06);border-top-color:var(--teal);border-radius:50%;animation:spin 1s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg);}}
+.fp-loading-text{font-size:9px;color:var(--text-d);letter-spacing:1px;}
+</style>
+</head>
+<body>
+<nav class="nav">
+  <div class="n-pulse"></div>
+  <span class="n-title">Cat <em>Adoption</em> Radar</span>
+  <div class="n-sep"></div>
+  <div class="n-tabs">
+    <div class="n-tab on" onclick="setTab(this)">Map</div>
+    <div class="n-tab" onclick="setTab(this)">List</div>
+    <div class="n-tab" onclick="setTab(this)">Stats</div>
+  </div>
+  <div class="n-right">
+    <div class="n-stats">
+      <div class="n-stat"><div class="n-lbl">Live</div><div class="n-val t" id="stat-total">—</div></div>
+      <div class="n-stat"><div class="n-lbl">Cities</div><div class="n-val" id="stat-cities">—</div></div>
+      <div class="n-stat"><div class="n-lbl">Urgent</div><div class="n-val r" id="stat-urgent">—</div></div>
+      <div class="n-stat"><div class="n-lbl">Free</div><div class="n-val b" id="stat-free">—</div></div>
+    </div>
+    <div class="n-sep"></div>
+    <a class="n-cta" href="https://televet.pk" target="_blank">Book Vet →</a>
+  </div>
+</nav>
+<div class="map-wrap">
+  <div id="map"></div>
+  <div class="map-grid"></div>
+  <div class="float-panel" id="fp">
+    <div class="fp-head">
+      <div class="fp-head-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M3 9h18M9 21V9"/></svg></div>
+      <div class="fp-head-title">Listings</div>
+      <div class="fp-collapse" onclick="togglePanel()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg></div>
+    </div>
+    <div class="fp-search">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+      <input id="search-input" placeholder="Search breed, city..." oninput="onSearch(this.value)">
+    </div>
+    <div class="fp-filters">
+      <div class="fp-f on" onclick="setFilter('all',this)"><div class="fp-f-dot" style="background:var(--teal)"></div>All</div>
+      <div class="fp-f" onclick="setFilter('urgent',this)"><div class="fp-f-dot" style="background:var(--red)"></div>Urgent</div>
+      <div class="fp-f" onclick="setFilter('free',this)"><div class="fp-f-dot" style="background:var(--blue)"></div>Free</div>
+      <div class="fp-f" onclick="setFilter('sale',this)"><div class="fp-f-dot" style="background:var(--text-d)"></div>Sale</div>
+    </div>
+    <div class="fp-list" id="fp-list">
+      <div class="fp-loading"><div class="fp-spinner"></div><div class="fp-loading-text">Loading listings...</div></div>
+    </div>
+    <div class="fp-legend">
+      <div class="fp-leg-item"><div class="fp-leg-dot" style="background:var(--teal)"></div>Available</div>
+      <div class="fp-leg-item"><div class="fp-leg-dot" style="background:var(--red)"></div>Urgent</div>
+      <div class="fp-leg-item"><div class="fp-leg-dot" style="background:var(--blue)"></div>Free</div>
+    </div>
+  </div>
+  <div class="map-hud">
+    <div class="hud-row"><div class="hud-dot" style="background:var(--teal);animation:np 1.4s infinite"></div>Live · <span id="hud-time">—</span></div>
+    <div class="hud-row"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>Pakistan only</div>
+  </div>
+  <div class="stats-strip">
+    <div class="ss-pill">
+      <div class="ss-item"><div class="ss-lbl">Listings</div><div class="ss-val" style="color:var(--teal)" id="ss-total">—</div></div>
+      <div class="ss-divider"></div>
+      <div class="ss-item"><div class="ss-lbl">Cities</div><div class="ss-val" style="color:var(--text)" id="ss-cities">—</div></div>
+      <div class="ss-divider"></div>
+      <div class="ss-item"><div class="ss-lbl">Urgent</div><div class="ss-val" style="color:var(--red)" id="ss-urgent">—</div></div>
+      <div class="ss-divider"></div>
+      <div class="ss-item"><div class="ss-lbl">Free</div><div class="ss-val" style="color:var(--blue)" id="ss-free">—</div></div>
+    </div>
+  </div>
+  <div class="zoom-ctrl">
+    <div class="zoom-btn" onclick="map.zoomIn()">+</div>
+    <div class="zoom-btn" onclick="map.zoomOut()">−</div>
+  </div>
+</div>
+<script>
+const CSV = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQ1WTdQBtcK-HGJ0lhOpwTz47nLAqS_8S09JBeAAe7OoY60BbTZWxd1jZyrnz4PYZMoVnCZh6l81ZtE/pub?gid=0&single=true&output=csv";
+
+let allCats=[],markers=[],map=null,activeFilter="all",searchTerm="",activeCard=null,lastLoaded=null;
+
+const COORDS={"Karachi":[24.8607,67.0011],"Lahore":[31.5204,74.3587],"Islamabad":[33.6844,73.0479],"Rawalpindi":[33.6007,73.0679],"Faisalabad":[31.4504,73.1350],"Multan":[30.1575,71.5249],"Peshawar":[34.0151,71.5249],"Quetta":[30.1798,66.9750],"Sialkot":[32.4945,74.5229],"Gujranwala":[32.1877,74.1945],"Sargodha":[32.0836,72.6711],"Sahiwal":[30.6682,73.1066],"Wah":[33.7667,72.7167],"Sheikhupura":[31.7167,73.9833],"Bahawalpur":[29.3956,71.6836],"Layyah":[30.9598,70.9389]};
+
+function initMap(){
+  map=L.map('map',{center:[30.3753,69.3451],zoom:6,zoomControl:false,minZoom:5,maxZoom:15,maxBounds:[[23,60],[37,78]],maxBoundsViscosity:1.0});
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',{attribution:'',maxZoom:18,subdomains:'abcd'}).addTo(map);
+}
+
+async function loadData(){
+  showLoading();
+  try{
+    const r=await fetch(CSV);
+    if(!r.ok) throw new Error("HTTP "+r.status);
+    const t=await r.text();
+    allCats=parseCSV(t);
+    lastLoaded=new Date();
+    renderAll();
+    updateStats();
+    updateHudTime();
+  }catch(e){
+    console.error(e);
+    showEmpty("Could not load listings.<br>Check sheet is published as CSV.");
+  }
+}
+
+function parseCSV(text){
+  text=text.replace(/^\uFEFF/,'');
+  const lines=text.split('\n').map(l=>l.trim()).filter(l=>l);
+  if(lines.length<2) return [];
+  const headers=splitLine(lines[0]);
+  const cats=[];
+  for(let i=1;i<lines.length;i++){
+    const vals=splitLine(lines[i]);
+    const row={};
+    headers.forEach((h,idx)=>{row[h.trim()]=(vals[idx]||'').trim();});
+    const urgency=(row["Urgency"]||"normal").toLowerCase();
+    const type=(row["Listing Type"]||"sale").toLowerCase();
+    const price=row["Price"]||"Not listed";
+    let status="available";
+    if(urgency==="urgent") status="urgent";
+    else if(type==="free"||price.toLowerCase()==="free"||type==="adoption") status="free";
+    cats.push({
+      name:row["Cat Name"]||"Unknown",breed:row["Breed"]||"Not specified",
+      age:row["Age"]||"",gender:row["Gender"]||"",color:row["Color"]||"",
+      price,city:row["City"]||"",hood:row["Neighbourhood"]||"",
+      health:row["Health Status"]||"",urgency,type,
+      contact:row["Contact Info"]||"",desc:row["Description"]||"",
+      source:row["Source"]||"OLX",scraped:row["Scraped At"]||"",
+      url:row["Original URL"]||"",status,
+      coords:getCityCoords(row["City"]||""),
+    });
+  }
+  return cats;
+}
+
+function splitLine(line){
+  const res=[];let cur="";let q=false;
+  for(let i=0;i<line.length;i++){
+    const c=line[i];
+    if(c==='"'){q=!q;}
+    else if(c===','&&!q){res.push(cur);cur="";}
+    else{cur+=c;}
+  }
+  res.push(cur);
+  return res;
+}
+
+function getCityCoords(city){
+  for(const[name,coords]of Object.entries(COORDS)){
+    if(city&&city.includes(name)){
+      return[coords[0]+(Math.random()-0.5)*0.09,coords[1]+(Math.random()-0.5)*0.09];
+    }
+  }
+  return[30.3753+(Math.random()-0.5)*6,69.3451+(Math.random()-0.5)*6];
+}
+
+function getFiltered(){
+  return allCats.filter(cat=>{
+    const mf=activeFilter==="all"||(activeFilter==="urgent"&&cat.status==="urgent")||(activeFilter==="free"&&cat.status==="free")||(activeFilter==="sale"&&cat.status==="available");
+    const q=searchTerm.toLowerCase();
+    const ms=!q||cat.name.toLowerCase().includes(q)||cat.breed.toLowerCase().includes(q)||cat.city.toLowerCase().includes(q)||cat.hood.toLowerCase().includes(q);
+    return mf&&ms;
+  });
+}
+
+function renderAll(){renderList();renderPins();}
+
+function renderList(){
+  const cats=getFiltered();
+  const el=document.getElementById('fp-list');
+  if(!cats.length){el.innerHTML='<div class="fp-empty">No listings match this filter</div>';return;}
+  el.innerHTML=cats.map((cat,i)=>{
+    const lc=cat.status==='urgent'?'var(--red)':cat.status==='free'?'var(--blue)':'var(--teal)';
+    const pc=cat.status==='urgent'?'var(--red)':cat.status==='free'?'var(--blue)':'var(--teal)';
+    const pl=cat.status==='urgent'
+      ?`<span class="fp-item-badge" style="border-color:rgba(255,77,109,0.4);color:var(--red);background:rgba(255,77,109,0.08)">Urgent</span>`
+      :`<span style="color:${pc}">${esc(cat.price)}</span>`;
+    return`<div class="fp-item" id="card-${i}" onclick="focusCat(${i})">
+      <div class="fp-item-line" style="background:${lc}"></div>
+      <div class="fp-item-info">
+        <div class="fp-item-name">${esc(cat.name)}${cat.breed&&cat.breed!=='Not specified'?' · '+esc(cat.breed):''}</div>
+        <div class="fp-item-meta">
+          <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
+          ${esc(cat.city)}${cat.hood&&cat.hood!=='Not specified'?', '+esc(cat.hood):''}
+        </div>
+      </div>
+      <div class="fp-item-price">${pl}</div>
+    </div>`;
+  }).join('');
+}
+
+function renderPins(){
+  markers.forEach(m=>map.removeLayer(m));
+  markers=[];
+  getFiltered().forEach((cat,i)=>{
+    if(!cat.coords) return;
+    const cls=cat.status==='urgent'?'urgent':cat.status==='free'?'free':'available';
+    const clr=cat.status==='urgent'?'#ff4d6d':cat.status==='free'?'#4f8ef7':'#00d4aa';
+    const icon=L.divIcon({className:'',html:`<div class="cat-pin ${cls}"><svg viewBox="0 0 24 24" fill="none" stroke="${clr}" stroke-width="2.5"><circle cx="12" cy="12" r="5"/></svg></div>`,iconSize:[22,22],iconAnchor:[11,11]});
+    const marker=L.marker(cat.coords,{icon}).addTo(map).bindPopup(makePopup(cat),{maxWidth:260,closeButton:true});
+    marker.on('click',()=>highlightCard(i));
+    markers.push(marker);
+  });
+}
+
+function makePopup(cat){
+  const pc=cat.status==='urgent'?'var(--red)':cat.status==='free'?'var(--blue)':'var(--teal)';
+  return`<div class="pu">
+    <div class="pu-name">${esc(cat.name)}</div>
+    <div class="pu-breed">${esc(cat.breed)}${cat.age?' · '+esc(cat.age):''}${cat.gender&&cat.gender!=='Unknown'?' · '+esc(cat.gender):''}</div>
+    ${cat.city?`<div class="pu-row"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>${esc(cat.city)}${cat.hood&&cat.hood!=='Not specified'?', '+esc(cat.hood):''}</div>`:''}
+    ${cat.health&&cat.health!=='Not mentioned'?`<div class="pu-row"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>${esc(cat.health)}</div>`:''}
+    ${cat.contact&&cat.contact!=='See link'?`<div class="pu-row"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013 4.18 2 2 0 014.18 2h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/></svg>${esc(cat.contact)}</div>`:''}
+    <div class="pu-price" style="color:${pc}">${esc(cat.price)}</div>
+    <div class="pu-btns">
+      <a class="pu-btn pu-btn-primary" href="https://televet.pk" target="_blank">Book Vet →</a>
+      ${cat.url?`<a class="pu-btn pu-btn-ghost" href="${esc(cat.url)}" target="_blank">OLX listing</a>`:''}
+    </div>
+  </div>`;
+}
+
+function focusCat(i){
+  const cat=getFiltered()[i];
+  if(!cat?.coords) return;
+  highlightCard(i);
+  map.flyTo(cat.coords,12,{duration:1.0});
+  if(markers[i]) markers[i].openPopup();
+}
+
+function highlightCard(i){
+  if(activeCard!==null) document.getElementById(`card-${activeCard}`)?.classList.remove('active');
+  activeCard=i;
+  const el=document.getElementById(`card-${i}`);
+  if(el){el.classList.add('active');el.scrollIntoView({behavior:'smooth',block:'nearest'});}
+}
+
+function setFilter(f,btn){
+  activeFilter=f;
+  document.querySelectorAll('.fp-f').forEach(b=>b.classList.remove('on'));
+  btn.classList.add('on');
+  activeCard=null;
+  renderAll();
+}
+
+function onSearch(val){searchTerm=val;activeCard=null;renderAll();}
+
+function setTab(btn){
+  document.querySelectorAll('.n-tab').forEach(b=>b.classList.remove('on'));
+  btn.classList.add('on');
+}
+
+function togglePanel(){
+  document.getElementById('fp').classList.toggle('collapsed');
+  setTimeout(()=>map.invalidateSize(),320);
+}
+
+function updateStats(){
+  const total=allCats.length;
+  const cities=new Set(allCats.map(c=>c.city).filter(Boolean)).size;
+  const urgent=allCats.filter(c=>c.status==='urgent').length;
+  const free=allCats.filter(c=>c.status==='free').length;
+  ['total','cities','urgent','free'].forEach(k=>{
+    const v=k==='total'?total:k==='cities'?cities:k==='urgent'?urgent:free;
+    document.getElementById('stat-'+k).textContent=v||'—';
+    document.getElementById('ss-'+k).textContent=v||'—';
+  });
+}
+
+function updateHudTime(){
+  if(!lastLoaded) return;
+  const diff=Math.floor((Date.now()-lastLoaded)/60000);
+  document.getElementById('hud-time').textContent=diff<1?'just now':diff<60?diff+'m ago':Math.floor(diff/60)+'h ago';
+}
+
+function showLoading(){document.getElementById('fp-list').innerHTML='<div class="fp-loading"><div class="fp-spinner"></div><div class="fp-loading-text">Loading listings...</div></div>';}
+function showEmpty(msg){document.getElementById('fp-list').innerHTML=`<div class="fp-empty">${msg}</div>`;}
+function esc(s){if(!s)return'';return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+
+initMap();
+loadData();
+setInterval(updateHudTime,60000);
+</script>
+</body>
+</html>
